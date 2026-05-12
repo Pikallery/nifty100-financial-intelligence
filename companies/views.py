@@ -265,6 +265,14 @@ class CompanyDetailView(View):
             .order_by("year__sort_order")
         )
 
+        # Latest non-TTM rows for quick stats
+        latest_pl = next(
+            (pl for pl in reversed(profit_loss) if not pl.year.is_ttm), None
+        )
+        latest_bs = next(
+            (bs for bs in reversed(balance_sheet) if not bs.year.is_ttm), None
+        )
+
         context = {
             "company":       company,
             "latest_score":  latest_score,
@@ -276,6 +284,8 @@ class CompanyDetailView(View):
             "profit_loss":   profit_loss,
             "balance_sheet": balance_sheet,
             "cash_flow":     cash_flow,
+            "latest_pl":     latest_pl,
+            "latest_bs":     latest_bs,
         }
         return render(request, self.template_name, context)
 

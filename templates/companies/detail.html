@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ company.name }} ({{ company.symbol }}) — B100 Intelligence{% endblock %}
+{% block title %}{{ company.company_name }} ({{ company.symbol }}) — B100 Intelligence{% endblock %}
 
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -12,8 +12,8 @@
 
       <!-- Logo -->
       <div class="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
-        {% if company.logo_url %}
-        <img src="{{ company.logo_url }}" alt="{{ company.name }}" class="w-full h-full object-contain p-2" />
+        {% if company.company_logo %}
+        <img src="{{ company.company_logo }}" alt="{{ company.company_name }}" class="w-full h-full object-contain p-2" />
         {% else %}
         <span class="text-navy-800 font-black text-2xl">{{ company.symbol|slice:":2" }}</span>
         {% endif %}
@@ -22,29 +22,31 @@
       <!-- Company info -->
       <div class="flex-1 min-w-0">
         <div class="flex flex-wrap items-start gap-2 mb-1">
-          <h1 class="text-2xl font-extrabold text-slate-800">{{ company.name }}</h1>
+          <h1 class="text-2xl font-extrabold text-slate-800">{{ company.company_name }}</h1>
+          {% if latest_score %}
           <span class="text-xs font-semibold px-2.5 py-1 rounded-full
-            {% if company.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
-            {% elif company.health_label == 'GOOD' %}bg-lime-100 text-lime-700
-            {% elif company.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
-            {% elif company.health_label == 'WEAK' %}bg-orange-100 text-orange-700
+            {% if latest_score.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
+            {% elif latest_score.health_label == 'GOOD' %}bg-lime-100 text-lime-700
+            {% elif latest_score.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
+            {% elif latest_score.health_label == 'WEAK' %}bg-orange-100 text-orange-700
             {% else %}bg-red-100 text-red-700{% endif %}">
-            {{ company.health_label }}
+            {{ latest_score.health_label }}
           </span>
+          {% endif %}
         </div>
         <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-3">
           <span class="font-semibold text-slate-700">{{ company.symbol }}</span>
           <span class="text-slate-300">|</span>
-          <span class="bg-navy-50 text-navy-700 border border-navy-100 px-2 py-0.5 rounded-full text-xs font-medium">{{ company.sector }}</span>
-          {% if company.nse_code %}
-          <a href="https://www.nseindia.com/get-quotes/equity?symbol={{ company.nse_code }}" target="_blank" rel="noopener"
+          <span class="bg-navy-50 text-navy-700 border border-navy-100 px-2 py-0.5 rounded-full text-xs font-medium">{{ company.sector.sector_name }}</span>
+          {% if company.nse_profile %}
+          <a href="{{ company.nse_profile }}" target="_blank" rel="noopener"
              class="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-colors">
             NSE
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           </a>
           {% endif %}
-          {% if company.bse_code %}
-          <a href="https://www.bseindia.com/stock-share-price/{{ company.bse_code }}/" target="_blank" rel="noopener"
+          {% if company.bse_profile %}
+          <a href="{{ company.bse_profile }}" target="_blank" rel="noopener"
              class="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-colors">
             BSE
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -58,27 +60,27 @@
           </a>
           {% endif %}
         </div>
-        {% if company.about %}
-        <p class="text-sm text-slate-600 leading-relaxed max-w-3xl">{{ company.about }}</p>
+        {% if company.about_company %}
+        <p class="text-sm text-slate-600 leading-relaxed max-w-3xl">{{ company.about_company }}</p>
         {% endif %}
       </div>
 
       <!-- Quick stats -->
       <div class="grid grid-cols-3 gap-3 md:gap-4 shrink-0">
         <div class="text-center">
-          <div class="text-lg font-bold {% if company.opm_pct >= 15 %}text-emerald-600{% elif company.opm_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
-            {{ company.opm_pct|default:"—" }}{% if company.opm_pct %}%{% endif %}
+          <div class="text-lg font-bold {% if latest_pl.opm_percentage >= 15 %}text-emerald-600{% elif latest_pl.opm_percentage >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {% if latest_pl.opm_percentage %}{{ latest_pl.opm_percentage }}%{% else %}—{% endif %}
           </div>
           <div class="text-xs text-slate-500 mt-0.5">OPM</div>
         </div>
         <div class="text-center border-x border-slate-100">
-          <div class="text-lg font-bold {% if company.debt_to_equity <= 1 %}text-emerald-600{% elif company.debt_to_equity <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
-            {{ company.debt_to_equity|default:"—" }}
+          <div class="text-lg font-bold {% if latest_bs.debt_to_equity <= 1 %}text-emerald-600{% elif latest_bs.debt_to_equity <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {{ latest_bs.debt_to_equity|default:"—" }}
           </div>
           <div class="text-xs text-slate-500 mt-0.5">D/E</div>
         </div>
         <div class="text-center">
-          <div class="text-lg font-bold text-navy-700">{{ company.roe_pct|default:"—" }}{% if company.roe_pct %}%{% endif %}</div>
+          <div class="text-lg font-bold text-navy-700">{% if company.roe_percentage %}{{ company.roe_percentage }}%{% else %}—{% endif %}</div>
           <div class="text-xs text-slate-500 mt-0.5">ROE</div>
         </div>
       </div>
@@ -97,19 +99,21 @@
           <div class="relative w-44 h-44">
             <canvas id="health-gauge" width="176" height="176"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <span class="text-4xl font-extrabold text-slate-800" id="gauge-score">{{ company.health_score|default:"—" }}</span>
+              <span class="text-4xl font-extrabold text-slate-800" id="gauge-score">{% if latest_score %}{{ latest_score.overall_score }}{% else %}—{% endif %}</span>
               <span class="text-xs text-slate-500 mt-0.5">out of 100</span>
             </div>
           </div>
           <div class="mt-4 text-center">
+            {% if latest_score %}
             <span class="inline-block text-sm font-bold px-4 py-1.5 rounded-full
-              {% if company.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
-              {% elif company.health_label == 'GOOD' %}bg-lime-100 text-lime-700
-              {% elif company.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
-              {% elif company.health_label == 'WEAK' %}bg-orange-100 text-orange-700
+              {% if latest_score.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
+              {% elif latest_score.health_label == 'GOOD' %}bg-lime-100 text-lime-700
+              {% elif latest_score.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
+              {% elif latest_score.health_label == 'WEAK' %}bg-orange-100 text-orange-700
               {% else %}bg-red-100 text-red-700{% endif %}">
-              {{ company.health_label }}
+              {{ latest_score.health_label }}
             </span>
+            {% endif %}
           </div>
           <!-- Score breakdown -->
           {% if health_breakdown %}
@@ -316,15 +320,15 @@
     .then(r => r.json())
     .then(data => {
 
-      // 1. Revenue vs Net Profit (combo bar + line)
-      if (data.revenue_profit) {
-        const d = data.revenue_profit;
+      // 1. Revenue vs Net Profit
+      if (data.revenue_trend) {
+        const d = data.revenue_trend;
         new Chart(document.getElementById('chart-revenue'), {
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
               { type: 'bar',  label: 'Revenue (Cr)',    data: d.revenue,    backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 },
-              { type: 'line', label: 'Net Profit (Cr)', data: d.net_profit, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#10b981' },
+              { type: 'line', label: 'Net Profit (Cr)', data: d.net_profit, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true, pointRadius: 4 },
             ],
           },
           options: { ...defaultOptions },
@@ -332,18 +336,17 @@
         showChart('chart-revenue');
       } else { errChart('chart-revenue'); }
 
-      // 2. Balance Sheet Composition (stacked bar)
+      // 2. Balance Sheet Composition
       if (data.balance_sheet) {
         const d = data.balance_sheet;
         new Chart(document.getElementById('chart-balance'), {
           type: 'bar',
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
-              { label: 'Fixed Assets',   data: d.fixed_assets,   backgroundColor: 'rgba(99,102,241,0.8)',  borderRadius: 4 },
-              { label: 'Current Assets', data: d.current_assets, backgroundColor: 'rgba(14,165,233,0.8)', borderRadius: 4 },
-              { label: 'Borrowings',     data: d.borrowings,     backgroundColor: 'rgba(239,68,68,0.8)',  borderRadius: 4 },
-              { label: 'Equity',         data: d.equity,         backgroundColor: 'rgba(16,185,129,0.8)', borderRadius: 4 },
+              { label: 'Equity',     data: d.equity,      backgroundColor: 'rgba(16,185,129,0.8)', borderRadius: 4 },
+              { label: 'Reserves',   data: d.reserves,    backgroundColor: 'rgba(14,165,233,0.8)', borderRadius: 4 },
+              { label: 'Borrowings', data: d.borrowings,  backgroundColor: 'rgba(239,68,68,0.8)',  borderRadius: 4 },
             ],
           },
           options: { ...defaultOptions, scales: { ...defaultOptions.scales, x: { stacked: true, ...defaultOptions.scales.x }, y: { stacked: true, ...defaultOptions.scales.y } } },
@@ -351,17 +354,17 @@
         showChart('chart-balance');
       } else { errChart('chart-balance'); }
 
-      // 3. Cash Flow (grouped bar)
+      // 3. Cash Flow
       if (data.cash_flow) {
         const d = data.cash_flow;
         new Chart(document.getElementById('chart-cashflow'), {
           type: 'bar',
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
-              { label: 'Operating CF', data: d.operating, backgroundColor: 'rgba(16,185,129,0.8)',  borderRadius: 4 },
-              { label: 'Investing CF', data: d.investing, backgroundColor: 'rgba(239,68,68,0.7)',  borderRadius: 4 },
-              { label: 'Financing CF', data: d.financing, backgroundColor: 'rgba(234,179,8,0.8)',  borderRadius: 4 },
+              { label: 'Operating', data: d.operating, backgroundColor: 'rgba(16,185,129,0.8)', borderRadius: 4 },
+              { label: 'Investing', data: d.investing, backgroundColor: 'rgba(239,68,68,0.7)',  borderRadius: 4 },
+              { label: 'Financing', data: d.financing, backgroundColor: 'rgba(234,179,8,0.8)',  borderRadius: 4 },
             ],
           },
           options: { ...defaultOptions },
@@ -369,16 +372,16 @@
         showChart('chart-cashflow');
       } else { errChart('chart-cashflow'); }
 
-      // 4. EPS & Dividend (dual line)
+      // 4. EPS & Dividend
       if (data.eps_dividend) {
         const d = data.eps_dividend;
         new Chart(document.getElementById('chart-eps'), {
           type: 'line',
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
-              { label: 'EPS (Rs)',      data: d.eps,      borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3, fill: true,  pointRadius: 4 },
-              { label: 'Dividend (Rs)', data: d.dividend, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: false, pointRadius: 4 },
+              { label: 'EPS (Rs)',      data: d.eps,             borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3, fill: true,  pointRadius: 4 },
+              { label: 'Dividend (%)', data: d.dividend_payout, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: false, pointRadius: 4 },
             ],
           },
           options: { ...defaultOptions },
@@ -386,16 +389,16 @@
         showChart('chart-eps');
       } else { errChart('chart-eps'); }
 
-      // 5. Debt vs Equity (area)
-      if (data.debt_equity) {
-        const d = data.debt_equity;
+      // 5. Debt vs Equity ratios
+      if (data.debt_vs_equity) {
+        const d = data.debt_vs_equity;
         new Chart(document.getElementById('chart-debt'), {
           type: 'line',
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
-              { label: 'Total Debt (Cr)', data: d.debt,   borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.15)',  tension: 0.3, fill: true,  pointRadius: 4 },
-              { label: 'Equity (Cr)',     data: d.equity, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.3, fill: true,  pointRadius: 4 },
+              { label: 'D/E Ratio',    data: d.debt_to_equity, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.15)',  tension: 0.3, fill: true, pointRadius: 4 },
+              { label: 'Equity Ratio', data: d.equity_ratio,   borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.3, fill: true, pointRadius: 4 },
             ],
           },
           options: { ...defaultOptions },
@@ -403,18 +406,17 @@
         showChart('chart-debt');
       } else { errChart('chart-debt'); }
 
-      // 6. Margin Trend (multi-line)
-      if (data.margins) {
-        const d = data.margins;
+      // 6. Margin Trend
+      if (data.margin_trend) {
+        const d = data.margin_trend;
         new Chart(document.getElementById('chart-margin'), {
           type: 'line',
           data: {
-            labels: d.years,
+            labels: d.labels,
             datasets: [
-              { label: 'OPM%',         data: d.opm,         borderColor: '#3b82f6', tension: 0.3, pointRadius: 3 },
-              { label: 'NPM%',         data: d.npm,         borderColor: '#10b981', tension: 0.3, pointRadius: 3 },
-              { label: 'Gross Margin', data: d.gross,       borderColor: '#f59e0b', tension: 0.3, pointRadius: 3 },
-              { label: 'EBITDA%',      data: d.ebitda,      borderColor: '#8b5cf6', tension: 0.3, pointRadius: 3 },
+              { label: 'OPM%', data: d.opm_pct,         borderColor: '#3b82f6', tension: 0.3, pointRadius: 3 },
+              { label: 'NPM%', data: d.npm_pct,         borderColor: '#10b981', tension: 0.3, pointRadius: 3 },
+              { label: 'ROA%', data: d.return_on_assets, borderColor: '#f59e0b', tension: 0.3, pointRadius: 3 },
             ],
           },
           options: { ...defaultOptions },
