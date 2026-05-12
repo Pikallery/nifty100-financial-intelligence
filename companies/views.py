@@ -62,7 +62,7 @@ class HomeView(View):
     - health_label_counts: dict of health_label → count for mini dashboard
     """
 
-    template_name = "companies/home.html"
+    template_name = "home.html"
 
     def get(self, request):
         # All active companies, annotated with latest score
@@ -130,7 +130,7 @@ class CompanyListView(View):
     - q           : search by symbol or company_name
     """
 
-    template_name = "companies/company_list.html"
+    template_name = "companies/list.html"
     PAGE_SIZE = 24
 
     def get(self, request):
@@ -213,7 +213,7 @@ class CompanyDetailView(View):
     - cash_flow     : all CF rows ordered by year
     """
 
-    template_name = "companies/company_detail.html"
+    template_name = "companies/detail.html"
 
     def get(self, request, symbol):
         symbol = symbol.upper()
@@ -356,7 +356,7 @@ class SectorDetailView(View):
     - avg_score : average overall_score for the sector
     """
 
-    template_name = "companies/sector_detail.html"
+    template_name = "companies/sector.html"
 
     def get(self, request, name):
         sector = get_object_or_404(

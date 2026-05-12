@@ -100,7 +100,7 @@ class ExecutiveSummaryView(StaffRequiredMixin, View):
     Sector distribution: company count per sector.
     """
 
-    template_name = "admin_insights/executive_summary.html"
+    template_name = "admin_insights/dashboard.html"
 
     def get(self, request):
         total_companies = Company.objects.count()
