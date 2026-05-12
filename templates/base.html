@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}B100 Intelligence{% endblock %}</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              50:  '#e8f0fb',
+              100: '#c5d6f4',
+              200: '#9eb9ec',
+              300: '#779ce4',
+              400: '#5a87de',
+              500: '#3d72d8',
+              600: '#2e5fc2',
+              700: '#2449a0',
+              800: '#1e3a5f',
+              900: '#14264a',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+  <style>
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    /* Autocomplete dropdown */
+    #search-dropdown {
+      max-height: 320px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    /* Skeleton loading animation */
+    .skeleton {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+    @keyframes skeleton-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Smooth page transitions */
+    .page-content { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Active nav link */
+    .nav-link-active {
+      background-color: rgba(255,255,255,0.15);
+      border-radius: 6px;
+    }
+
+    /* Marquee */
+    .marquee-container { overflow: hidden; white-space: nowrap; }
+    .marquee-inner { display: inline-block; animation: marquee 40s linear infinite; }
+    .marquee-inner:hover { animation-play-state: paused; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="h-full bg-slate-50 font-sans text-slate-800 antialiased">
+
+  <!-- ============================================================ NAVBAR ============================================================ -->
+  <nav class="bg-navy-800 shadow-lg sticky top-0 z-50">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center shadow">
+            <span class="text-navy-900 font-black text-sm">B1</span>
+          </div>
+          <span class="text-white font-bold text-lg tracking-tight hidden sm:block">B100 <span class="text-cyan-300">Intelligence</span></span>
+        </a>
+
+        <!-- Desktop nav links -->
+        <div class="hidden md:flex items-center gap-1 ml-6">
+          <a href="/"
+             class="nav-link text-slate-200 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-md text-sm font-medium transition-all {% if request.resolver_match.url_name == 'home' %}nav-link-active text-white{% endif %}">
+            Home
+          </a>
+          <a href="/companies/"
+             class="nav-link text-slate-200 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-md text-sm font-medium transition-all {% if 'companies' in request.path %}nav-link-active text-white{% endif %}">
+            Companies
+          </a>
+          <a href="/screener/"
+             class="nav-link text-slate-200 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-md text-sm font-medium transition-all {% if 'screener' in request.path %}nav-link-active text-white{% endif %}">
+            Screener
+          </a>
+          <a href="/compare/"
+             class="nav-link text-slate-200 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-md text-sm font-medium transition-all {% if 'compare' in request.path %}nav-link-active text-white{% endif %}">
+            Compare
+          </a>
+        </div>
+
+        <!-- Search bar -->
+        <div class="flex-1 max-w-xl mx-4 relative" id="navbar-search-wrapper">
+          <form action="/companies/" method="get" autocomplete="off">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+                </svg>
+              </div>
+              <input
+                type="text"
+                id="navbar-search"
+                name="search"
+                placeholder="Search companies, sectors..."
+                class="w-full bg-white/10 text-white placeholder-slate-400 border border-white/20 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:bg-white/20 transition-all"
+                autocomplete="off"
+              />
+            </div>
+          </form>
+
+          <!-- Autocomplete dropdown -->
+          <div id="search-dropdown"
+               class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 hidden z-50">
+            <div id="search-results-list" class="py-1"></div>
+          </div>
+        </div>
+
+        <!-- Right side: mobile menu button -->
+        <div class="flex items-center gap-2">
+          <!-- Theme toggle (optional) -->
+          <button class="hidden md:flex items-center text-slate-300 hover:text-white p-1.5 rounded-md hover:bg-white/10 transition-all" title="Toggle theme" id="theme-toggle">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 1 0 10A5 5 0 0 1 12 7z"/>
+            </svg>
+          </button>
+
+          <!-- Mobile hamburger -->
+          <button id="mobile-menu-btn"
+                  class="md:hidden text-slate-300 hover:text-white p-1.5 rounded-md hover:bg-white/10 transition-all">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="md:hidden hidden pb-3 border-t border-white/10 mt-1 pt-3">
+        <div class="flex flex-col gap-1">
+          <a href="/" class="text-slate-200 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium">Home</a>
+          <a href="/companies/" class="text-slate-200 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium">Companies</a>
+          <a href="/screener/" class="text-slate-200 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium">Screener</a>
+          <a href="/compare/" class="text-slate-200 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium">Compare</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================================ FLASH MESSAGES ============================================================ -->
+  {% if messages %}
+  <div class="max-w-screen-2xl mx-auto px-4 pt-4 space-y-2" id="flash-messages">
+    {% for message in messages %}
+    <div class="flex items-center gap-3 p-3 rounded-lg border
+                {% if message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800
+                {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+                {% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
+                {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+      <span class="text-sm font-medium">{{ message }}</span>
+      <button onclick="this.closest('div').remove()" class="ml-auto text-current opacity-60 hover:opacity-100">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ============================================================ MAIN CONTENT ============================================================ -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ============================================================ FOOTER ============================================================ -->
+  <footer class="bg-navy-800 text-slate-400 mt-16">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center">
+              <span class="text-navy-900 font-black text-xs">B1</span>
+            </div>
+            <span class="text-white font-bold">B100 Intelligence</span>
+          </div>
+          <p class="text-xs leading-relaxed">Financial analytics platform for NSE Nifty 100 companies. Data is for informational purposes only and does not constitute financial advice.</p>
+        </div>
+        <div>
+          <h4 class="text-slate-200 font-semibold text-sm mb-3">Quick Links</h4>
+          <ul class="space-y-1.5 text-xs">
+            <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
+            <li><a href="/companies/" class="hover:text-white transition-colors">Companies</a></li>
+            <li><a href="/screener/" class="hover:text-white transition-colors">Screener</a></li>
+            <li><a href="/compare/" class="hover:text-white transition-colors">Compare</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-slate-200 font-semibold text-sm mb-3">Disclaimer</h4>
+          <p class="text-xs leading-relaxed">All financial data sourced from public filings. Health scores are algorithmic estimates. Not SEBI registered. Always consult a qualified financial advisor before investing.</p>
+        </div>
+      </div>
+      <div class="border-t border-white/10 mt-6 pt-4 text-center text-xs">
+        &copy; {% now "Y" %} B100 Intelligence. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================ GLOBAL JS ============================================================ -->
+  <script>
+    // ---- Mobile menu toggle ----
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    });
+
+    // ---- Navbar search autocomplete ----
+    (function () {
+      const input    = document.getElementById('navbar-search');
+      const dropdown = document.getElementById('search-dropdown');
+      const list     = document.getElementById('search-results-list');
+      let   debounceTimer;
+      let   activeIndex = -1;
+
+      function closeDropdown() {
+        dropdown.classList.add('hidden');
+        activeIndex = -1;
+      }
+
+      function renderResults(companies) {
+        list.innerHTML = '';
+        if (!companies.length) {
+          list.innerHTML = '<div class="px-4 py-3 text-sm text-slate-500">No companies found</div>';
+          return;
+        }
+        companies.forEach(function (c, i) {
+          const el = document.createElement('a');
+          el.href = '/companies/' + c.symbol + '/';
+          el.className = 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100 last:border-0';
+          el.dataset.index = i;
+          el.innerHTML = `
+            <div class="w-8 h-8 rounded-full bg-navy-100 flex items-center justify-center shrink-0 overflow-hidden">
+              ${c.logo_url
+                ? `<img src="${c.logo_url}" alt="${c.name}" class="w-full h-full object-contain"/>`
+                : `<span class="text-navy-800 font-bold text-xs">${(c.symbol || '').slice(0,2)}</span>`}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-slate-800 truncate">${c.name}</div>
+              <div class="text-xs text-slate-500">${c.symbol} &middot; ${c.sector || ''}</div>
+            </div>
+            <span class="text-xs px-1.5 py-0.5 rounded font-medium
+              ${c.health_label === 'EXCELLENT' ? 'bg-emerald-100 text-emerald-700'
+              : c.health_label === 'GOOD'      ? 'bg-lime-100 text-lime-700'
+              : c.health_label === 'AVERAGE'   ? 'bg-yellow-100 text-yellow-700'
+              : c.health_label === 'WEAK'      ? 'bg-orange-100 text-orange-700'
+              :                                  'bg-red-100 text-red-700'}">${c.health_label || ''}</span>
+          `;
+          list.appendChild(el);
+        });
+      }
+
+      function fetchSuggestions(q) {
+        if (!q || q.length < 1) { closeDropdown(); return; }
+        fetch('/api/v1/companies/?search=' + encodeURIComponent(q) + '&limit=8')
+          .then(r => r.json())
+          .then(data => {
+            const results = data.results || data;
+            if (results.length) {
+              renderResults(results);
+              dropdown.classList.remove('hidden');
+            } else {
+              renderResults([]);
+              dropdown.classList.remove('hidden');
+            }
+          })
+          .catch(function () { closeDropdown(); });
+      }
+
+      input.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () { fetchSuggestions(input.value.trim()); }, 220);
+      });
+
+      input.addEventListener('keydown', function (e) {
+        const items = list.querySelectorAll('a');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIndex = Math.min(activeIndex + 1, items.length - 1);
+          items.forEach((el, i) => el.classList.toggle('bg-slate-100', i === activeIndex));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = Math.max(activeIndex - 1, -1);
+          items.forEach((el, i) => el.classList.toggle('bg-slate-100', i === activeIndex));
+        } else if (e.key === 'Enter') {
+          if (activeIndex >= 0 && items[activeIndex]) {
+            e.preventDefault();
+            window.location.href = items[activeIndex].href;
+          }
+        } else if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!document.getElementById('navbar-search-wrapper').contains(e.target)) {
+          closeDropdown();
+        }
+      });
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

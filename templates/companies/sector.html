@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ sector.name }} Sector — B100 Intelligence{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-1.5 text-xs text-slate-400 mb-5">
+    <a href="/" class="hover:text-slate-600 transition-colors">Home</a>
+    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    <a href="/companies/" class="hover:text-slate-600 transition-colors">Companies</a>
+    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    <span class="text-slate-700 font-medium">{{ sector.name }}</span>
+  </nav>
+
+  <!-- ============================================================ SECTOR HEADER ============================================================ -->
+  <div class="bg-gradient-to-r from-navy-800 to-navy-700 rounded-2xl p-6 text-white mb-6 shadow">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="text-3xl">{{ sector.icon|default:"🏢" }}</div>
+          <h1 class="text-2xl font-extrabold">{{ sector.name }}</h1>
+        </div>
+        <p class="text-slate-300 text-sm max-w-xl">{{ sector.description|default:"Nifty 100 companies in the " }}{{ sector.name }} sector</p>
+      </div>
+      <div class="flex gap-4">
+        <div class="text-center">
+          <div class="text-2xl font-extrabold">{{ sector.company_count }}</div>
+          <div class="text-xs text-slate-300 mt-0.5">Companies</div>
+        </div>
+        <div class="text-center border-l border-white/20 pl-4">
+          <div class="text-2xl font-extrabold">{{ sector.avg_health_score|default:"—" }}</div>
+          <div class="text-xs text-slate-300 mt-0.5">Avg Health</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ AGGREGATE METRICS ============================================================ -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+    {% for metric in aggregate_metrics %}
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold {{ metric.color|default:'text-slate-700' }}">{{ metric.value }}</div>
+      <div class="text-xs text-slate-500 mt-0.5">{{ metric.label }}</div>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.avg_opm_pct|default:"—" }}{% if sector.avg_opm_pct %}%{% endif %}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Avg OPM</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.avg_de|default:"—" }}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Avg D/E</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.avg_roe_pct|default:"—" }}{% if sector.avg_roe_pct %}%{% endif %}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Avg ROE</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.total_revenue_cr|default:"—" }}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Total Rev (Cr)</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.avg_sales_growth|default:"—" }}{% if sector.avg_sales_growth %}%{% endif %}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Avg Sales Gr</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+      <div class="text-lg font-bold text-slate-700">{{ sector.avg_npm_pct|default:"—" }}{% if sector.avg_npm_pct %}%{% endif %}</div>
+      <div class="text-xs text-slate-500 mt-0.5">Avg NPM</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ============================================================ COMPANIES TABLE ============================================================ -->
+    <div class="lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-slate-800 text-lg">Companies Ranked by Health Score</h2>
+        <span class="text-xs text-slate-400">{{ sector.company_count }} total</span>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 w-8">Rank</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Company</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Health</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell">Score</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell">OPM%</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 hidden lg:table-cell">D/E</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 hidden lg:table-cell">ROE%</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for company in companies %}
+              <tr class="hover:bg-slate-50 transition-colors group">
+                <td class="px-4 py-3">
+                  <span class="text-xs font-bold
+                    {% if forloop.counter <= 3 %}text-amber-500{% else %}text-slate-400{% endif %}">
+                    #{{ forloop.counter }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+                      {% if company.logo_url %}
+                      <img src="{{ company.logo_url }}" alt="{{ company.name }}" class="w-full h-full object-contain p-0.5"/>
+                      {% else %}
+                      <span class="text-navy-700 font-bold text-xs">{{ company.symbol|slice:":2" }}</span>
+                      {% endif %}
+                    </div>
+                    <div>
+                      <a href="/companies/{{ company.symbol }}/"
+                         class="font-semibold text-slate-800 group-hover:text-navy-700 leading-tight text-sm transition-colors">{{ company.name }}</a>
+                      <div class="text-xs text-slate-400">{{ company.symbol }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                    {% if company.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
+                    {% elif company.health_label == 'GOOD' %}bg-lime-100 text-lime-700
+                    {% elif company.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
+                    {% elif company.health_label == 'WEAK' %}bg-orange-100 text-orange-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ company.health_label }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right hidden md:table-cell">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <div class="w-14 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                      <div class="h-1.5 rounded-full
+                        {% if company.health_score >= 70 %}bg-emerald-500{% elif company.health_score >= 50 %}bg-yellow-400{% else %}bg-red-400{% endif %}"
+                        style="width: {{ company.health_score|default:0 }}%"></div>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-600 w-5">{{ company.health_score|default:"—" }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-right hidden md:table-cell">
+                  <span class="font-medium text-xs {% if company.opm_pct >= 15 %}text-emerald-600{% elif company.opm_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
+                    {{ company.opm_pct|default:"—" }}{% if company.opm_pct %}%{% endif %}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right hidden lg:table-cell">
+                  <span class="font-medium text-xs {% if company.debt_to_equity <= 1 %}text-emerald-600{% elif company.debt_to_equity <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
+                    {{ company.debt_to_equity|default:"—" }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right hidden lg:table-cell">
+                  <span class="font-medium text-xs {% if company.roe_pct >= 15 %}text-emerald-600{% elif company.roe_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
+                    {{ company.roe_pct|default:"—" }}{% if company.roe_pct %}%{% endif %}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400 text-sm">No companies in this sector.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ CHART + HEALTH DIST ============================================================ -->
+    <div class="space-y-5">
+
+      <!-- Sector revenue chart -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Aggregate Revenue Trend</h3>
+        <div class="h-52">
+          <canvas id="sector-revenue-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Health distribution donut -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Health Distribution</h3>
+        <div class="h-44 flex items-center justify-center">
+          <canvas id="sector-health-donut"></canvas>
+        </div>
+        <div class="mt-3 space-y-1.5">
+          {% for label, count, color in health_distribution %}
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full {{ color }}"></div>
+              <span class="text-slate-600">{{ label }}</span>
+            </div>
+            <span class="font-semibold text-slate-700">{{ count }}</span>
+          </div>
+          {% empty %}
+          <p class="text-xs text-slate-400 text-center">No data</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const SECTOR = '{{ sector.name|escapejs }}';
+
+  // ---- Sector revenue chart ----
+  fetch('/api/v1/sectors/' + encodeURIComponent(SECTOR) + '/charts/')
+    .then(r => r.json())
+    .then(data => {
+      if (data.aggregate_revenue) {
+        const d = data.aggregate_revenue;
+        new Chart(document.getElementById('sector-revenue-chart'), {
+          type: 'bar',
+          data: {
+            labels: d.years,
+            datasets: [{
+              label: 'Aggregate Revenue (Cr)',
+              data: d.revenue,
+              backgroundColor: 'rgba(59,130,246,0.75)',
+              borderRadius: 5,
+            }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+              y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            },
+          },
+        });
+      }
+    })
+    .catch(function () {});
+
+  // ---- Health donut ----
+  const healthData = {
+    labels: {{ health_distribution|default:'["EXCELLENT","GOOD","AVERAGE","WEAK","POOR"]'|safe }},
+    counts: {{ health_counts|default:'[0,0,0,0,0]'|safe }},
+  };
+  new Chart(document.getElementById('sector-health-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: healthData.labels,
+      datasets: [{
+        data: healthData.counts,
+        backgroundColor: ['#10b981','#84cc16','#eab308','#f97316','#ef4444'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { display: false } },
+    },
+  });
+})();
+</script>
+{% endblock %}

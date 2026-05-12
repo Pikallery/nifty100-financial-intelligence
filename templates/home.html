@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}B100 Intelligence — Nifty 100 Financial Analytics{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================ HERO ================================================================ -->
+<section class="bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-white pt-20 pb-24 px-4 relative overflow-hidden">
+  <!-- Background decoration -->
+  <div class="absolute inset-0 pointer-events-none select-none opacity-10">
+    <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-cyan-400 blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-blue-500 blur-3xl"></div>
+  </div>
+
+  <div class="max-w-3xl mx-auto text-center relative z-10">
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-cyan-300 mb-4 bg-white/10 px-3 py-1 rounded-full">
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+      NSE Nifty 100 Coverage
+    </span>
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
+      Intelligent Financial<br class="hidden sm:block" />
+      <span class="text-cyan-300">Analytics</span> at a Glance
+    </h1>
+    <p class="text-slate-300 text-lg mb-8 max-w-xl mx-auto">
+      Deep-dive into Nifty 100 companies — health scores, multi-year financials, sector analysis, peer comparisons, and AI-powered insights.
+    </p>
+
+    <!-- Hero search -->
+    <div class="relative max-w-xl mx-auto" id="hero-search-wrapper">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="hero-search"
+          placeholder="Search by company name or NSE symbol..."
+          class="w-full bg-white text-slate-800 placeholder-slate-400 rounded-xl pl-11 pr-4 py-4 text-base shadow-xl focus:outline-none focus:ring-4 focus:ring-cyan-400/50 transition-all"
+          autocomplete="off"
+        />
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <button class="bg-navy-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy-700 transition-colors">
+            Search
+          </button>
+        </div>
+      </div>
+      <!-- Hero autocomplete dropdown -->
+      <div id="hero-dropdown"
+           class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 hidden z-50 text-left">
+        <div id="hero-results" class="py-1 max-h-72 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="flex flex-wrap justify-center gap-6 mt-10 text-center">
+      {% for stat in hero_stats %}
+      <div>
+        <div class="text-2xl font-extrabold text-white">{{ stat.value }}</div>
+        <div class="text-xs text-slate-400 mt-0.5">{{ stat.label }}</div>
+      </div>
+      {% empty %}
+      <div><div class="text-2xl font-extrabold text-white">100+</div><div class="text-xs text-slate-400 mt-0.5">Companies</div></div>
+      <div><div class="text-2xl font-extrabold text-white">10+</div><div class="text-xs text-slate-400 mt-0.5">Sectors</div></div>
+      <div><div class="text-2xl font-extrabold text-white">5 Yrs</div><div class="text-xs text-slate-400 mt-0.5">Historical Data</div></div>
+      <div><div class="text-2xl font-extrabold text-white">Daily</div><div class="text-xs text-slate-400 mt-0.5">Updates</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ INSIGHTS TICKER ================================================================ -->
+<div class="bg-navy-900 text-slate-300 py-2 border-b border-navy-700">
+  <div class="marquee-container max-w-screen-2xl mx-auto px-4 overflow-hidden">
+    <div class="marquee-inner text-xs">
+      {% for insight in ticker_insights %}
+        <span class="inline-flex items-center gap-1.5 mr-8">
+          <span class="{% if insight.type == 'pro' %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">{{ insight.company }}</span>
+          <span>{{ insight.text }}</span>
+          <span class="text-slate-600 mx-2">|</span>
+        </span>
+      {% empty %}
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">RELIANCE</span><span>Strong cash flow generation supports dividend growth</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">TCS</span><span>Consistent EBIT margins above 24% over 5 years</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-red-400 font-semibold">ADANIENT</span><span>Elevated debt levels warrant close monitoring</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">HDFCBANK</span><span>CASA ratio remains healthy at 44%</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">INFY</span><span>Free cash flow conversion >90% for 3 consecutive years</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-red-400 font-semibold">YESBANK</span><span>NPA levels stabilising after restructuring</span><span class="text-slate-600 mx-2">|</span></span>
+        <!-- Duplicate for seamless loop -->
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">RELIANCE</span><span>Strong cash flow generation supports dividend growth</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">TCS</span><span>Consistent EBIT margins above 24% over 5 years</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-red-400 font-semibold">ADANIENT</span><span>Elevated debt levels warrant close monitoring</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">HDFCBANK</span><span>CASA ratio remains healthy at 44%</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-emerald-400 font-semibold">INFY</span><span>Free cash flow conversion >90% for 3 consecutive years</span><span class="text-slate-600 mx-2">|</span></span>
+        <span class="inline-flex items-center gap-1.5 mr-8"><span class="text-red-400 font-semibold">YESBANK</span><span>NPA levels stabilising after restructuring</span><span class="text-slate-600 mx-2">|</span></span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ FEATURED COMPANIES ================================================================ -->
+<section class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-800">Featured Companies</h2>
+      <p class="text-sm text-slate-500 mt-0.5">Top-rated companies by overall health score</p>
+    </div>
+    <a href="/companies/" class="text-sm font-semibold text-navy-800 hover:text-navy-600 flex items-center gap-1 transition-colors">
+      View all
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for company in featured_companies %}
+    <a href="/companies/{{ company.symbol }}/"
+       class="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-lg hover:border-navy-200 transition-all duration-200">
+
+      <div class="flex items-start justify-between mb-4">
+        <!-- Logo + name -->
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+            {% if company.logo_url %}
+            <img src="{{ company.logo_url }}" alt="{{ company.name }}" class="w-full h-full object-contain p-1" />
+            {% else %}
+            <span class="text-navy-800 font-bold text-sm">{{ company.symbol|slice:":2" }}</span>
+            {% endif %}
+          </div>
+          <div>
+            <div class="font-bold text-slate-800 text-sm leading-tight group-hover:text-navy-800 transition-colors">{{ company.name }}</div>
+            <div class="text-xs text-slate-500 mt-0.5">{{ company.symbol }}</div>
+          </div>
+        </div>
+
+        <!-- Health score circle -->
+        <div class="relative w-14 h-14 shrink-0">
+          <svg class="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+            <circle cx="28" cy="28" r="22" fill="none" stroke="#e2e8f0" stroke-width="5"/>
+            <circle cx="28" cy="28" r="22" fill="none"
+                    stroke="{% if company.health_label == 'EXCELLENT' %}#10b981
+                            {% elif company.health_label == 'GOOD' %}#84cc16
+                            {% elif company.health_label == 'AVERAGE' %}#eab308
+                            {% elif company.health_label == 'WEAK' %}#f97316
+                            {% else %}#ef4444{% endif %}"
+                    stroke-width="5"
+                    stroke-linecap="round"
+                    stroke-dasharray="{{ company.health_score|default:0 }}, 138"
+                    class="transition-all duration-700"/>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-xs font-bold text-slate-700">{{ company.health_score|default:"--" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sector badge -->
+      <div class="mb-3">
+        <span class="inline-block text-xs font-medium bg-navy-50 text-navy-700 border border-navy-100 px-2 py-0.5 rounded-full">
+          {{ company.sector }}
+        </span>
+        <span class="ml-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full
+          {% if company.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
+          {% elif company.health_label == 'GOOD' %}bg-lime-100 text-lime-700
+          {% elif company.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
+          {% elif company.health_label == 'WEAK' %}bg-orange-100 text-orange-700
+          {% else %}bg-red-100 text-red-700{% endif %}">
+          {{ company.health_label }}
+        </span>
+      </div>
+
+      <!-- Key metrics -->
+      <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
+        <div class="text-center">
+          <div class="text-sm font-bold {% if company.opm_pct >= 15 %}text-emerald-600{% elif company.opm_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {{ company.opm_pct|default:"—" }}{% if company.opm_pct %}%{% endif %}
+          </div>
+          <div class="text-xs text-slate-500">OPM</div>
+        </div>
+        <div class="text-center border-l border-slate-100">
+          <div class="text-sm font-bold {% if company.debt_to_equity <= 1 %}text-emerald-600{% elif company.debt_to_equity <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {{ company.debt_to_equity|default:"—" }}
+          </div>
+          <div class="text-xs text-slate-500">D/E Ratio</div>
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <!-- Skeleton cards while loading -->
+    {% for i in "123456" %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <div class="flex items-start justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl skeleton"></div>
+          <div class="space-y-2">
+            <div class="h-4 w-28 rounded skeleton"></div>
+            <div class="h-3 w-16 rounded skeleton"></div>
+          </div>
+        </div>
+        <div class="w-14 h-14 rounded-full skeleton"></div>
+      </div>
+      <div class="h-5 w-20 rounded-full skeleton mb-3"></div>
+      <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
+        <div class="h-8 rounded skeleton"></div>
+        <div class="h-8 rounded skeleton"></div>
+      </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ================================================================ SECTOR GRID ================================================================ -->
+<section class="bg-slate-100 py-12">
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-800">Browse by Sector</h2>
+        <p class="text-sm text-slate-500 mt-0.5">{{ sectors|length|default:"12" }} sectors covered across Nifty 100</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      {% for sector in sectors %}
+      <a href="/companies/?sector={{ sector.name|urlencode }}"
+         class="group bg-white rounded-xl border border-slate-200 p-4 text-center hover:shadow-md hover:border-navy-300 hover:-translate-y-0.5 transition-all duration-200">
+        <div class="text-2xl mb-2">{{ sector.icon|default:"🏢" }}</div>
+        <div class="text-sm font-semibold text-slate-700 group-hover:text-navy-800 leading-tight mb-2">{{ sector.name }}</div>
+        <div class="text-xs text-slate-500">{{ sector.company_count }} companies</div>
+        <div class="mt-1.5 flex items-center justify-center gap-1">
+          <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+            <div class="h-1.5 rounded-full
+              {% if sector.avg_health_score >= 70 %}bg-emerald-500
+              {% elif sector.avg_health_score >= 50 %}bg-yellow-400
+              {% else %}bg-red-400{% endif %}"
+              style="width: {{ sector.avg_health_score|default:50 }}%"></div>
+          </div>
+        </div>
+        <div class="text-xs font-medium mt-1
+          {% if sector.avg_health_score >= 70 %}text-emerald-600
+          {% elif sector.avg_health_score >= 50 %}text-amber-600
+          {% else %}text-red-500{% endif %}">
+          Avg {{ sector.avg_health_score|default:"—" }}
+        </div>
+      </a>
+      {% empty %}
+      {% for sector_name in "IT,Banking,FMCG,Auto,Pharma,Energy,Infrastructure,Metals,Finance,Telecom,Consumer,Healthcare"|split:"," %}
+      <a href="/companies/?sector={{ sector_name }}"
+         class="group bg-white rounded-xl border border-slate-200 p-4 text-center hover:shadow-md hover:border-navy-300 hover:-translate-y-0.5 transition-all duration-200">
+        <div class="text-2xl mb-2">🏢</div>
+        <div class="text-sm font-semibold text-slate-700 group-hover:text-navy-800 leading-tight mb-2">{{ sector_name }}</div>
+        <div class="text-xs text-slate-500">— companies</div>
+      </a>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ MARKET SNAPSHOT ================================================================ -->
+<section class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold text-slate-800">Health Distribution</h2>
+    <span class="text-sm text-slate-500">Across all Nifty 100 companies</span>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    {% for label, count, color, bg in health_distribution %}
+    <div class="bg-white rounded-xl border border-slate-200 p-5 text-center">
+      <div class="text-3xl font-extrabold {{ color }} mb-1">{{ count }}</div>
+      <div class="text-xs font-semibold uppercase tracking-wider {{ color }}">{{ label }}</div>
+      <div class="mt-3 w-full {{ bg }} rounded-full h-2"></div>
+    </div>
+    {% empty %}
+    {% for item in "EXCELLENT:8:text-emerald-600:bg-emerald-500,GOOD:24:text-lime-600:bg-lime-500,AVERAGE:38:text-yellow-600:bg-yellow-400,WEAK:20:text-orange-600:bg-orange-400,POOR:10:text-red-600:bg-red-500"|split:"," %}
+    <div class="bg-white rounded-xl border border-slate-200 p-5 text-center">
+      <div class="text-3xl font-extrabold text-slate-700 mb-1">—</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">—</div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Hero search autocomplete (mirrors navbar logic)
+(function () {
+  const input    = document.getElementById('hero-search');
+  const dropdown = document.getElementById('hero-dropdown');
+  const list     = document.getElementById('hero-results');
+  let   timer;
+
+  function close() { dropdown.classList.add('hidden'); }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) { close(); return; }
+    timer = setTimeout(function () {
+      fetch('/api/v1/companies/?search=' + encodeURIComponent(q) + '&limit=8')
+        .then(r => r.json())
+        .then(data => {
+          const results = data.results || data;
+          list.innerHTML = '';
+          if (!results.length) {
+            list.innerHTML = '<div class="px-4 py-3 text-sm text-slate-500">No results</div>';
+          } else {
+            results.forEach(function (c) {
+              const a = document.createElement('a');
+              a.href = '/companies/' + c.symbol + '/';
+              a.className = 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors';
+              a.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-navy-50 flex items-center justify-center shrink-0">
+                  <span class="text-navy-800 font-bold text-xs">${(c.symbol||'').slice(0,2)}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-slate-800 truncate">${c.name}</div>
+                  <div class="text-xs text-slate-500">${c.symbol} &middot; ${c.sector||''}</div>
+                </div>
+              `;
+              list.appendChild(a);
+            });
+          }
+          dropdown.classList.remove('hidden');
+        });
+    }, 220);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!document.getElementById('hero-search-wrapper').contains(e.target)) close();
+  });
+})();
+</script>
+{% endblock %}

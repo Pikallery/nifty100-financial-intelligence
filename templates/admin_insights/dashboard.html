@@ -1,0 +1,170 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Dashboard — B100 Admin{% endblock %}
+{% block page_title %}Platform Dashboard{% endblock %}
+{% block page_subtitle %}Overview of data coverage, health scores, and API activity{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ KPI CARDS ============================================================ -->
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-6">
+  {% for kpi in kpis %}
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ kpi.label }}</span>
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ kpi.icon_bg }}">
+        <svg class="h-4 w-4 {{ kpi.icon_color }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {{ kpi.icon_path|safe }}
+        </svg>
+      </div>
+    </div>
+    <div class="text-2xl font-extrabold text-white mb-0.5">{{ kpi.value }}</div>
+    <div class="text-xs {% if kpi.delta_positive %}text-emerald-400{% else %}text-red-400{% endif %}">
+      {{ kpi.delta|default:"—" }}
+    </div>
+  </div>
+  {% empty %}
+  <!-- Default KPI cards -->
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Total Companies</div>
+    <div class="text-2xl font-extrabold text-white">{{ total_companies|default:"—" }}</div>
+    <div class="text-xs text-emerald-400 mt-0.5">+0 this month</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Points</div>
+    <div class="text-2xl font-extrabold text-white">{{ total_data_points|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">fact_financials rows</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">API Calls Today</div>
+    <div class="text-2xl font-extrabold text-white">{{ api_calls_today|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Across all endpoints</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Pending Anomalies</div>
+    <div class="text-2xl font-extrabold text-red-400">{{ pending_anomalies|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Awaiting review</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Scored Companies</div>
+    <div class="text-2xl font-extrabold text-white">{{ scored_companies|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">With health score</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Completeness</div>
+    <div class="text-2xl font-extrabold text-emerald-400">{{ data_completeness|default:"—" }}{% if data_completeness %}%{% endif %}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Avg fill rate</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Active Webhooks</div>
+    <div class="text-2xl font-extrabold text-white">{{ active_webhooks|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Subscriptions</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Celery Tasks</div>
+    <div class="text-2xl font-extrabold text-white">{{ celery_tasks_today|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Completed today</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+
+  <!-- Health distribution donut -->
+  <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-4">Health Score Distribution</h3>
+    <div class="flex items-center gap-4">
+      <div class="relative w-36 h-36 shrink-0">
+        <canvas id="health-donut"></canvas>
+      </div>
+      <div class="space-y-2 text-xs">
+        {% for label, count, color in health_distribution %}
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ color }}"></div>
+          <span class="text-slate-400 flex-1">{{ label }}</span>
+          <span class="font-bold text-slate-200">{{ count }}</span>
+        </div>
+        {% empty %}
+        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div><span class="text-slate-400">EXCELLENT</span><span class="font-bold text-slate-200">—</span></div>
+        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-lime-500"></div><span class="text-slate-400">GOOD</span><span class="font-bold text-slate-200">—</span></div>
+        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div><span class="text-slate-400">AVERAGE</span><span class="font-bold text-slate-200">—</span></div>
+        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-orange-400"></div><span class="text-slate-400">WEAK</span><span class="font-bold text-slate-200">—</span></div>
+        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div><span class="text-slate-400">POOR</span><span class="font-bold text-slate-200">—</span></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="lg:col-span-2 rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-4">Recent System Activity</h3>
+    <div class="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+      {% for event in recent_activity %}
+      <div class="flex items-start gap-3 text-xs">
+        <div class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0
+          {% if event.type == 'success' %}bg-emerald-400{% elif event.type == 'error' %}bg-red-400{% elif event.type == 'warning' %}bg-amber-400{% else %}bg-blue-400{% endif %}">
+        </div>
+        <div class="flex-1 min-w-0">
+          <span class="text-slate-300">{{ event.message }}</span>
+        </div>
+        <span class="text-slate-500 shrink-0">{{ event.timestamp|timesince }} ago</span>
+      </div>
+      {% empty %}
+      <p class="text-xs text-slate-500 text-center py-4">No recent activity</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Sector summary table -->
+<div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <h3 class="text-sm font-semibold text-slate-300 mb-4">Sector Summary</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b" style="border-color:#1e3d5c">
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Sector</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Companies</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Avg Score</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Avg OPM%</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Avg D/E</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y" style="border-color:#1e3d5c">
+        {% for row in sector_summary %}
+        <tr class="hover:bg-white/5 transition-colors">
+          <td class="py-2 px-3 text-slate-300 font-medium">{{ row.sector }}</td>
+          <td class="py-2 px-3 text-right text-slate-300">{{ row.company_count }}</td>
+          <td class="py-2 px-3 text-right">
+            <span class="font-semibold {% if row.avg_health_score >= 70 %}text-emerald-400{% elif row.avg_health_score >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">
+              {{ row.avg_health_score|default:"—" }}
+            </span>
+          </td>
+          <td class="py-2 px-3 text-right text-slate-300 hidden md:table-cell">{{ row.avg_opm|default:"—" }}{% if row.avg_opm %}%{% endif %}</td>
+          <td class="py-2 px-3 text-right text-slate-300 hidden md:table-cell">{{ row.avg_de|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="py-8 text-center text-slate-500">No sector data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const labels = {{ health_labels_js|default:'["EXCELLENT","GOOD","AVERAGE","WEAK","POOR"]'|safe }};
+  const counts = {{ health_counts_js|default:'[0,0,0,0,0]'|safe }};
+  new Chart(document.getElementById('health-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{ data: counts, backgroundColor: ['#10b981','#84cc16','#eab308','#f97316','#ef4444'], borderWidth: 2, borderColor: '#1a2f47' }],
+    },
+    options: { responsive: true, maintainAspectRatio: true, cutout: '68%', plugins: { legend: { display: false } } },
+  });
+})();
+</script>
+{% endblock %}

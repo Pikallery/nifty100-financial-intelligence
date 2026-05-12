@@ -1,0 +1,209 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}API Analytics — B100 Admin{% endblock %}
+{% block page_title %}API Analytics{% endblock %}
+{% block page_subtitle %}Request volume, latency, and endpoint breakdown{% endblock %}
+
+{% block content %}
+
+<!-- KPI cards -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Calls Today</div>
+    <div class="text-2xl font-extrabold text-white">{{ calls_today|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Calls This Month</div>
+    <div class="text-2xl font-extrabold text-white">{{ calls_month|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Avg Latency</div>
+    <div class="text-2xl font-extrabold {% if avg_latency_ms <= 200 %}text-emerald-400{% elif avg_latency_ms <= 500 %}text-yellow-400{% else %}text-red-400{% endif %}">
+      {{ avg_latency_ms|default:"—" }}{% if avg_latency_ms %}ms{% endif %}
+    </div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Error Rate</div>
+    <div class="text-2xl font-extrabold {% if error_rate_pct <= 1 %}text-emerald-400{% elif error_rate_pct <= 5 %}text-yellow-400{% else %}text-red-400{% endif %}">
+      {{ error_rate_pct|default:"—" }}{% if error_rate_pct %}%{% endif %}
+    </div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Unique Callers</div>
+    <div class="text-2xl font-extrabold text-white">{{ unique_callers|default:"—" }}</div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+
+  <!-- Daily volume bar chart -->
+  <div class="lg:col-span-2 rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-semibold text-slate-300">Daily API Call Volume (Last 30 Days)</h3>
+      <select id="period-select" class="text-xs bg-slate-800 border border-slate-600 text-slate-300 rounded-lg px-2 py-1 focus:outline-none cursor-pointer">
+        <option value="30">30 Days</option>
+        <option value="14">14 Days</option>
+        <option value="7">7 Days</option>
+      </select>
+    </div>
+    <div class="h-56">
+      <canvas id="daily-volume-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Endpoint breakdown donut -->
+  <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-4">Endpoint Breakdown</h3>
+    <div class="h-44">
+      <canvas id="endpoint-donut"></canvas>
+    </div>
+    <div class="mt-3 space-y-1.5 max-h-32 overflow-y-auto pr-1">
+      {% for ep in endpoint_stats %}
+      <div class="flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-2 h-2 rounded-full shrink-0" style="background: {{ ep.color }}"></div>
+          <span class="text-slate-400 truncate font-mono">{{ ep.path }}</span>
+        </div>
+        <span class="font-semibold text-slate-300 shrink-0 ml-2">{{ ep.calls|default:"0" }}</span>
+      </div>
+      {% empty %}
+      <p class="text-xs text-slate-500 text-center">No data yet</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Response time histogram + status codes -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+  <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-4">Response Time Distribution (ms)</h3>
+    <div class="h-44">
+      <canvas id="latency-chart"></canvas>
+    </div>
+  </div>
+  <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-4">HTTP Status Code Breakdown</h3>
+    <div class="space-y-2.5">
+      {% for row in status_breakdown %}
+      <div class="flex items-center gap-3 text-xs">
+        <span class="w-10 font-mono font-bold text-right
+          {% if row.status_code < 300 %}text-emerald-400{% elif row.status_code < 500 %}text-amber-400{% else %}text-red-400{% endif %}">
+          {{ row.status_code }}
+        </span>
+        <div class="flex-1 bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div class="h-2 rounded-full
+            {% if row.status_code < 300 %}bg-emerald-500{% elif row.status_code < 500 %}bg-amber-400{% else %}bg-red-500{% endif %}"
+            style="width: {{ row.pct|default:0 }}%"></div>
+        </div>
+        <span class="text-slate-400 w-12 text-right">{{ row.count }}</span>
+      </div>
+      {% empty %}
+      <p class="text-xs text-slate-500 text-center">No status data</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Top callers table -->
+<div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <h3 class="text-sm font-semibold text-slate-300 mb-4">Top API Callers (Last 7 Days)</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b" style="border-color:#1e3d5c">
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">#</th>
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Partner</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Total Calls</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Avg Latency</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Error Rate</th>
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Top Endpoint</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y" style="border-color:#1e3d5c">
+        {% for caller in top_callers %}
+        <tr class="hover:bg-white/5 transition-colors">
+          <td class="py-2 px-3 text-slate-500">{{ forloop.counter }}</td>
+          <td class="py-2 px-3">
+            <div class="font-semibold text-slate-200">{{ caller.partner_name }}</div>
+            <div class="text-slate-500">{{ caller.tier }}</div>
+          </td>
+          <td class="py-2 px-3 text-right font-semibold text-slate-200">{{ caller.total_calls|default:"0" }}</td>
+          <td class="py-2 px-3 text-right hidden md:table-cell
+            {% if caller.avg_latency <= 200 %}text-emerald-400{% elif caller.avg_latency <= 500 %}text-yellow-400{% else %}text-red-400{% endif %}">
+            {{ caller.avg_latency|default:"—" }}{% if caller.avg_latency %}ms{% endif %}
+          </td>
+          <td class="py-2 px-3 text-right hidden md:table-cell
+            {% if caller.error_rate <= 1 %}text-emerald-400{% elif caller.error_rate <= 5 %}text-yellow-400{% else %}text-red-400{% endif %}">
+            {{ caller.error_rate|default:"0" }}%
+          </td>
+          <td class="py-2 px-3 hidden lg:table-cell font-mono text-slate-400">{{ caller.top_endpoint|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-8 text-center text-slate-500">No data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const chartDefaults = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+      y: { grid: { color: '#1e3d5c' }, ticks: { color: '#64748b', font: { size: 10 } } },
+    },
+  };
+
+  // Daily volume bar chart
+  const volumeData = {{ daily_volume_json|default:'{"labels":[],"values":[]}'|safe }};
+  const volCtx = document.getElementById('daily-volume-chart');
+  let volChart = new Chart(volCtx, {
+    type: 'bar',
+    data: {
+      labels: volumeData.labels,
+      datasets: [{ label: 'API Calls', data: volumeData.values, backgroundColor: 'rgba(59,130,246,0.75)', borderRadius: 3 }],
+    },
+    options: chartDefaults,
+  });
+
+  document.getElementById('period-select').addEventListener('change', function () {
+    const period = parseInt(this.value);
+    fetch('/api/v1/admin/api-volume/?days=' + period)
+      .then(r => r.json())
+      .then(data => {
+        volChart.data.labels   = data.labels;
+        volChart.data.datasets[0].data = data.values;
+        volChart.update();
+      })
+      .catch(() => {});
+  });
+
+  // Endpoint donut
+  const epData = {{ endpoint_chart_json|default:'{"labels":[],"values":[],"colors":[]}'|safe }};
+  new Chart(document.getElementById('endpoint-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: epData.labels,
+      datasets: [{ data: epData.values, backgroundColor: epData.colors || ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'], borderWidth: 2, borderColor: '#1a2f47' }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } },
+  });
+
+  // Latency histogram
+  const latData = {{ latency_chart_json|default:'{"labels":[],"values":[]}'|safe }};
+  new Chart(document.getElementById('latency-chart'), {
+    type: 'bar',
+    data: {
+      labels: latData.labels,
+      datasets: [{ label: 'Requests', data: latData.values, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 3 }],
+    },
+    options: chartDefaults,
+  });
+})();
+</script>
+{% endblock %}

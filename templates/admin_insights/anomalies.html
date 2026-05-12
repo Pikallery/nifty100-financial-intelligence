@@ -1,0 +1,175 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Anomalies — B100 Admin{% endblock %}
+{% block page_title %}Anomaly Review{% endblock %}
+{% block page_subtitle %}Flagged financial anomalies requiring manual review{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Flagged</div>
+    <div class="text-2xl font-extrabold text-red-400">{{ total_anomalies|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Pending Review</div>
+    <div class="text-2xl font-extrabold text-amber-400">{{ pending_count|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Reviewed</div>
+    <div class="text-2xl font-extrabold text-emerald-400">{{ reviewed_count|default:"—" }}</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-4">
+  <select id="anm-method" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All Methods</option>
+    <option value="zscore">Z-Score</option>
+    <option value="iforest">Isolation Forest</option>
+    <option value="both">Both (Agreement)</option>
+  </select>
+  <select id="anm-metric" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All Metrics</option>
+    <option value="sales">Sales</option>
+    <option value="net_profit">Net Profit</option>
+    <option value="borrowings">Borrowings</option>
+    <option value="operating_profit">Operating Profit</option>
+  </select>
+  <select id="anm-status" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All Statuses</option>
+    <option value="pending">Pending</option>
+    <option value="reviewed">Reviewed</option>
+    <option value="false_positive">False Positive</option>
+  </select>
+  <input type="text" id="anm-search" placeholder="Company name / symbol..."
+         class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+</div>
+
+<!-- Bulk action bar -->
+<form method="post" action="/admin-insights/anomalies/bulk-review/" id="anomaly-form">
+  {% csrf_token %}
+  <div class="flex items-center gap-3 mb-3">
+    <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+      <input type="checkbox" id="select-all-anomalies" class="w-4 h-4 rounded accent-blue-500">
+      Select all visible
+    </label>
+    <button type="submit" name="action" value="mark_reviewed"
+            class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+      Mark Reviewed
+    </button>
+    <button type="submit" name="action" value="mark_false_positive"
+            class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-500 text-white transition-colors">
+      False Positive
+    </button>
+  </div>
+
+  <!-- Anomaly table -->
+  <div class="rounded-xl border overflow-hidden" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr style="background:#142036;border-bottom:1px solid #1e3d5c">
+            <th class="px-3 py-3 text-left w-8">
+              <input type="checkbox" class="w-4 h-4 rounded accent-blue-500">
+            </th>
+            <th class="text-left px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Company</th>
+            <th class="text-left px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">FY</th>
+            <th class="text-left px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Metric</th>
+            <th class="text-right px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Value</th>
+            <th class="text-right px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Z-Score</th>
+            <th class="text-left px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Method</th>
+            <th class="text-left px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Context</th>
+            <th class="text-center px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+          </tr>
+        </thead>
+        <tbody id="anomaly-tbody" class="divide-y" style="border-color:#1e3d5c">
+          {% for anomaly in anomalies %}
+          <tr class="anm-row hover:bg-white/5 transition-colors"
+              data-method="{{ anomaly.method }}"
+              data-metric="{{ anomaly.metric }}"
+              data-status="{{ anomaly.status }}"
+              data-name="{{ anomaly.company_name|lower }}">
+            <td class="px-3 py-2.5">
+              <input type="checkbox" name="anomaly_ids" value="{{ anomaly.id }}"
+                     class="anomaly-cb w-4 h-4 rounded accent-blue-500">
+            </td>
+            <td class="px-3 py-2.5">
+              <div class="font-semibold text-slate-200">{{ anomaly.company_name }}</div>
+              <div class="text-slate-500">{{ anomaly.symbol }}</div>
+            </td>
+            <td class="px-3 py-2.5 text-slate-300 font-medium">FY{{ anomaly.fiscal_year }}</td>
+            <td class="px-3 py-2.5">
+              <span class="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-mono">{{ anomaly.metric }}</span>
+            </td>
+            <td class="px-3 py-2.5 text-right font-semibold text-slate-200">{{ anomaly.value|floatformat:2|default:"—" }}</td>
+            <td class="px-3 py-2.5 text-right">
+              <span class="font-bold {% if anomaly.z_score|abs > 3 %}text-red-400{% else %}text-amber-400{% endif %}">
+                {{ anomaly.z_score|floatformat:2|default:"—" }}
+              </span>
+            </td>
+            <td class="px-3 py-2.5 hidden md:table-cell">
+              {% if anomaly.method == 'both' %}
+              <span class="text-xs font-semibold bg-red-900 text-red-300 px-1.5 py-0.5 rounded">Both</span>
+              {% elif anomaly.method == 'zscore' %}
+              <span class="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Z-Score</span>
+              {% else %}
+              <span class="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">IForest</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2.5 hidden lg:table-cell text-slate-400 max-w-xs truncate">
+              {{ anomaly.context|default:"—" }}
+            </td>
+            <td class="px-3 py-2.5 text-center">
+              {% if anomaly.status == 'reviewed' %}
+              <span class="text-xs font-semibold bg-emerald-900 text-emerald-300 px-1.5 py-0.5 rounded">Reviewed</span>
+              {% elif anomaly.status == 'false_positive' %}
+              <span class="text-xs font-semibold bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">FP</span>
+              {% else %}
+              <span class="text-xs font-semibold bg-amber-900 text-amber-300 px-1.5 py-0.5 rounded">Pending</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="px-4 py-12 text-center text-slate-500">No anomalies flagged</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const selectAll  = document.getElementById('select-all-anomalies');
+  const methodSel  = document.getElementById('anm-method');
+  const metricSel  = document.getElementById('anm-metric');
+  const statusSel  = document.getElementById('anm-status');
+  const searchInp  = document.getElementById('anm-search');
+
+  selectAll.addEventListener('change', function () {
+    document.querySelectorAll('.anomaly-cb').forEach(cb => { cb.checked = selectAll.checked; });
+  });
+
+  function filter() {
+    const method = methodSel.value;
+    const metric = metricSel.value;
+    const status = statusSel.value;
+    const q      = searchInp.value.toLowerCase();
+    document.querySelectorAll('.anm-row').forEach(function (row) {
+      const ok = (!method || row.dataset.method === method) &&
+                 (!metric || row.dataset.metric === metric) &&
+                 (!status || row.dataset.status === status) &&
+                 (!q      || row.dataset.name.includes(q));
+      row.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [methodSel, metricSel, statusSel].forEach(el => el.addEventListener('change', filter));
+  searchInp.addEventListener('input', filter);
+})();
+</script>
+{% endblock %}

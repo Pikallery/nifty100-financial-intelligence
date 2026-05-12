@@ -1,0 +1,270 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Bulk Import — B100 Admin{% endblock %}
+{% block page_title %}Bulk Data Import{% endblock %}
+{% block page_subtitle %}Upload CSV/Excel files to import financial data{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+  <!-- ============================================================ UPLOAD FORM ============================================================ -->
+  <div class="rounded-xl border p-6" style="background:#1a2f47;border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300 mb-5">Upload Data File</h3>
+
+    <form method="post" action="/admin-insights/bulk-import/upload/" enctype="multipart/form-data" id="import-form">
+      {% csrf_token %}
+
+      <!-- File type -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Data Type</label>
+        <select name="data_type" id="data-type"
+                class="w-full text-sm border rounded-lg px-3 py-2.5 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+          <option value="fact_financials">Fact Financials (P&L / Balance Sheet)</option>
+          <option value="fact_cashflows">Fact Cash Flows</option>
+          <option value="fact_ratios">Fact Ratios</option>
+          <option value="dim_companies">Company Master Data</option>
+          <option value="dim_annual_reports">Annual Report Links</option>
+        </select>
+      </div>
+
+      <!-- Fiscal year -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Fiscal Year</label>
+        <select name="fiscal_year"
+                class="w-full text-sm border rounded-lg px-3 py-2.5 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+          {% for yr in fiscal_year_choices %}
+          <option value="{{ yr }}">FY{{ yr }}</option>
+          {% empty %}
+          <option value="2024">FY2024</option>
+          <option value="2023">FY2023</option>
+          <option value="2022">FY2022</option>
+          <option value="2021">FY2021</option>
+          <option value="2020">FY2020</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- File dropzone -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">File</label>
+        <div id="dropzone"
+             class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+             ondragover="event.preventDefault(); this.classList.add('border-blue-400')"
+             ondragleave="this.classList.remove('border-blue-400')"
+             ondrop="handleDrop(event)">
+          <div id="dropzone-content">
+            <svg class="h-10 w-10 text-slate-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-sm text-slate-400 mb-1">Drag & drop your file here</p>
+            <p class="text-xs text-slate-500">or</p>
+            <label class="mt-2 inline-block cursor-pointer text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+              Browse file
+              <input type="file" name="file" id="file-input" accept=".csv,.xlsx,.xls" class="hidden" onchange="previewFile(this)" />
+            </label>
+            <p class="text-xs text-slate-600 mt-2">CSV, XLSX up to 10MB</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="mb-5 space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+          <input type="checkbox" name="validate_only" id="validate-only" class="w-4 h-4 rounded accent-blue-500">
+          Validate only (dry run — do not import)
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+          <input type="checkbox" name="overwrite_existing" class="w-4 h-4 rounded accent-blue-500">
+          Overwrite existing records
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+          <input type="checkbox" name="send_webhook" checked class="w-4 h-4 rounded accent-blue-500">
+          Trigger webhooks after import
+        </label>
+      </div>
+
+      <button type="submit"
+              class="w-full text-sm font-semibold py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center justify-center gap-2"
+              id="import-btn">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        <span id="import-btn-text">Upload & Import</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- ============================================================ FORMAT GUIDE ============================================================ -->
+  <div class="space-y-4">
+
+    <!-- Expected format -->
+    <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+      <h3 class="text-sm font-semibold text-slate-300 mb-3">Expected CSV Format</h3>
+      <div id="format-guide" class="text-xs">
+        <div id="fmt-fact_financials">
+          <p class="text-slate-400 mb-2">Required columns for <span class="text-blue-400 font-mono">fact_financials</span>:</p>
+          <div class="font-mono text-slate-300 bg-slate-800 rounded-lg p-3 text-xs overflow-x-auto whitespace-nowrap">
+            symbol, fiscal_year, sales, expenses, operating_profit, opm_pct,<br>
+            other_income, interest, depreciation, profit_before_tax,<br>
+            tax_pct, net_profit, eps, dividend_pct
+          </div>
+        </div>
+        <div id="fmt-fact_cashflows" class="hidden">
+          <p class="text-slate-400 mb-2">Required columns for <span class="text-blue-400 font-mono">fact_cashflows</span>:</p>
+          <div class="font-mono text-slate-300 bg-slate-800 rounded-lg p-3 text-xs overflow-x-auto whitespace-nowrap">
+            symbol, fiscal_year, cash_from_operating,<br>cash_from_investing, cash_from_financing, net_cash_flow
+          </div>
+        </div>
+        <div id="fmt-fact_ratios" class="hidden">
+          <p class="text-slate-400 mb-2">Required columns for <span class="text-blue-400 font-mono">fact_ratios</span>:</p>
+          <div class="font-mono text-slate-300 bg-slate-800 rounded-lg p-3 text-xs overflow-x-auto whitespace-nowrap">
+            symbol, fiscal_year, debt_to_equity, interest_coverage,<br>current_ratio, roe_pct, roce_pct, price_to_earnings, price_to_book
+          </div>
+        </div>
+        <div id="fmt-dim_companies" class="hidden">
+          <p class="text-slate-400 mb-2">Required columns for <span class="text-blue-400 font-mono">dim_companies</span>:</p>
+          <div class="font-mono text-slate-300 bg-slate-800 rounded-lg p-3 text-xs overflow-x-auto whitespace-nowrap">
+            symbol, name, sector, nse_code, bse_code, website, logo_url, about
+          </div>
+        </div>
+        <div id="fmt-dim_annual_reports" class="hidden">
+          <p class="text-slate-400 mb-2">Required columns for <span class="text-blue-400 font-mono">dim_annual_reports</span>:</p>
+          <div class="font-mono text-slate-300 bg-slate-800 rounded-lg p-3 text-xs overflow-x-auto whitespace-nowrap">
+            symbol, fiscal_year, pdf_url, report_title
+          </div>
+        </div>
+      </div>
+      <a href="/admin-insights/bulk-import/template/" class="mt-3 inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Download template CSV
+      </a>
+    </div>
+
+    <!-- Validation results -->
+    {% if validation_result %}
+    <div class="rounded-xl border p-5 {% if validation_result.errors %}border-red-500/40{% else %}border-emerald-500/40{% endif %}"
+         style="background:#1a2f47">
+      <h3 class="text-sm font-semibold {% if validation_result.errors %}text-red-300{% else %}text-emerald-300{% endif %} mb-3">
+        Validation Results
+      </h3>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="text-center">
+          <div class="text-xl font-bold text-slate-200">{{ validation_result.total_rows }}</div>
+          <div class="text-xs text-slate-400">Total Rows</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-emerald-400">{{ validation_result.valid_rows }}</div>
+          <div class="text-xs text-slate-400">Valid</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-red-400">{{ validation_result.error_rows }}</div>
+          <div class="text-xs text-slate-400">Errors</div>
+        </div>
+      </div>
+      {% if validation_result.errors %}
+      <div class="space-y-1 max-h-40 overflow-y-auto">
+        {% for err in validation_result.errors %}
+        <div class="text-xs text-red-300 bg-red-900/30 px-2 py-1 rounded font-mono">
+          Row {{ err.row }}: {{ err.message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-emerald-300">All rows passed validation. Safe to import.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Recent imports -->
+    <div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+      <h3 class="text-sm font-semibold text-slate-300 mb-3">Recent Import History</h3>
+      <div class="space-y-2">
+        {% for job in recent_imports %}
+        <div class="flex items-start gap-3 text-xs p-2.5 rounded-lg" style="background:#142036">
+          <div class="shrink-0 mt-0.5">
+            {% if job.status == 'completed' %}
+            <span class="text-emerald-400">&#10003;</span>
+            {% elif job.status == 'failed' %}
+            <span class="text-red-400">&#10007;</span>
+            {% else %}
+            <svg class="animate-spin h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            {% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-slate-200">{{ job.filename }}</div>
+            <div class="text-slate-500">{{ job.data_type }} &middot; FY{{ job.fiscal_year }} &middot; {{ job.rows_imported }} rows</div>
+          </div>
+          <div class="shrink-0 text-slate-500">{{ job.created_at|timesince }} ago</div>
+        </div>
+        {% empty %}
+        <p class="text-xs text-slate-500 text-center py-3">No imports yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function handleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('border-blue-400');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('file-input').files = e.dataTransfer.files;
+    previewFile({ files: [file] });
+  }
+}
+
+function previewFile(input) {
+  const file = input.files ? input.files[0] : null;
+  if (!file) return;
+  const dz = document.getElementById('dropzone-content');
+  dz.innerHTML = `
+    <svg class="h-8 w-8 text-emerald-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-sm font-semibold text-emerald-300">${file.name}</p>
+    <p class="text-xs text-slate-400 mt-1">${(file.size / 1024).toFixed(1)} KB &middot; ${file.type || 'CSV/Excel'}</p>
+    <button type="button" onclick="clearFile()" class="mt-2 text-xs text-red-400 hover:text-red-300 transition-colors">Remove</button>`;
+}
+
+function clearFile() {
+  document.getElementById('file-input').value = '';
+  const dz = document.getElementById('dropzone-content');
+  dz.innerHTML = `
+    <svg class="h-10 w-10 text-slate-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+    </svg>
+    <p class="text-sm text-slate-400 mb-1">Drag & drop your file here</p>
+    <p class="text-xs text-slate-500">or</p>
+    <label class="mt-2 inline-block cursor-pointer text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+      Browse file
+      <input type="file" name="file" id="file-input" accept=".csv,.xlsx,.xls" class="hidden" onchange="previewFile(this)" />
+    </label>
+    <p class="text-xs text-slate-600 mt-2">CSV, XLSX up to 10MB</p>`;
+}
+
+// Format guide toggle
+document.getElementById('data-type').addEventListener('change', function () {
+  const val = this.value;
+  document.querySelectorAll('#format-guide > div').forEach(function (div) {
+    div.classList.toggle('hidden', div.id !== 'fmt-' + val);
+  });
+});
+
+// Submit UX
+document.getElementById('import-form').addEventListener('submit', function () {
+  const btn  = document.getElementById('import-btn');
+  const txt  = document.getElementById('import-btn-text');
+  const isValidate = document.getElementById('validate-only').checked;
+  btn.disabled  = true;
+  txt.textContent = isValidate ? 'Validating...' : 'Importing...';
+  btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>${txt.textContent}`;
+});
+</script>
+{% endblock %}

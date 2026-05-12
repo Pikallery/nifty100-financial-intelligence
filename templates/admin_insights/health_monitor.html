@@ -1,0 +1,148 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Health Monitor — B100 Admin{% endblock %}
+{% block page_title %}Health Monitor{% endblock %}
+{% block page_subtitle %}Company health scores — colour-coded by label{% endblock %}
+
+{% block content %}
+
+<!-- Summary bar -->
+<div class="grid grid-cols-5 gap-3 mb-5">
+  {% for label, count, bg, text_col in health_summary %}
+  <div class="rounded-xl border p-3 text-center" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xl font-extrabold {{ text_col }}">{{ count }}</div>
+    <div class="text-xs {{ text_col }} font-semibold uppercase mt-0.5">{{ label }}</div>
+  </div>
+  {% empty %}
+  {% for item in "EXCELLENT:text-emerald-400,GOOD:text-lime-400,AVERAGE:text-yellow-400,WEAK:text-orange-400,POOR:text-red-400"|split:"," %}
+  <div class="rounded-xl border p-3 text-center" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xl font-extrabold text-slate-300">—</div>
+    <div class="text-xs text-slate-500 uppercase mt-0.5">{{ item|split:":"|first }}</div>
+  </div>
+  {% endfor %}
+  {% endfor %}
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-4">
+  <input type="text" id="hm-search" placeholder="Search company..." class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+  <select id="hm-label-filter" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All Labels</option>
+    <option value="EXCELLENT">EXCELLENT</option>
+    <option value="GOOD">GOOD</option>
+    <option value="AVERAGE">AVERAGE</option>
+    <option value="WEAK">WEAK</option>
+    <option value="POOR">POOR</option>
+  </select>
+  <select id="hm-sector-filter" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All Sectors</option>
+    {% for sector in sectors %}
+    <option value="{{ sector }}">{{ sector }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<!-- Company table -->
+<div class="rounded-xl border overflow-hidden" style="background:#1a2f47;border-color:#1e3d5c">
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr style="background:#142036;border-bottom:1px solid #1e3d5c">
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">#</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Company</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Sector</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Label</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Score</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">OPM%</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">D/E</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">ROE%</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Scored At</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="hm-tbody" class="divide-y" style="border-color:#1e3d5c">
+        {% for c in companies %}
+        <tr class="hm-row hover:bg-white/5 transition-colors
+          {% if c.health_label == 'EXCELLENT' %}border-l-2 border-emerald-500
+          {% elif c.health_label == 'GOOD' %}border-l-2 border-lime-500
+          {% elif c.health_label == 'AVERAGE' %}border-l-2 border-yellow-400
+          {% elif c.health_label == 'WEAK' %}border-l-2 border-orange-400
+          {% else %}border-l-2 border-red-500{% endif %}"
+          data-name="{{ c.name|lower }}" data-symbol="{{ c.symbol|lower }}"
+          data-label="{{ c.health_label }}" data-sector="{{ c.sector }}">
+          <td class="px-4 py-2.5 text-slate-500">{{ forloop.counter }}</td>
+          <td class="px-4 py-2.5">
+            <div class="font-semibold text-slate-200">{{ c.name }}</div>
+            <div class="text-slate-500">{{ c.symbol }}</div>
+          </td>
+          <td class="px-4 py-2.5 hidden sm:table-cell">
+            <span class="bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-xs">{{ c.sector }}</span>
+          </td>
+          <td class="px-4 py-2.5 text-center">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+              {% if c.health_label == 'EXCELLENT' %}bg-emerald-900 text-emerald-300
+              {% elif c.health_label == 'GOOD' %}bg-lime-900 text-lime-300
+              {% elif c.health_label == 'AVERAGE' %}bg-yellow-900 text-yellow-300
+              {% elif c.health_label == 'WEAK' %}bg-orange-900 text-orange-300
+              {% else %}bg-red-900 text-red-300{% endif %}">
+              {{ c.health_label }}
+            </span>
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <span class="font-bold
+              {% if c.health_score >= 70 %}text-emerald-400{% elif c.health_score >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">
+              {{ c.health_score|default:"—" }}
+            </span>
+          </td>
+          <td class="px-4 py-2.5 text-right hidden md:table-cell text-slate-300">
+            {{ c.opm_pct|default:"—" }}{% if c.opm_pct %}%{% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right hidden md:table-cell text-slate-300">{{ c.debt_to_equity|default:"—" }}</td>
+          <td class="px-4 py-2.5 text-right hidden lg:table-cell text-slate-300">
+            {{ c.roe_pct|default:"—" }}{% if c.roe_pct %}%{% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right hidden lg:table-cell text-slate-500 text-xs">
+            {{ c.scored_at|date:"d M Y"|default:"—" }}
+          </td>
+          <td class="px-4 py-2.5 text-center">
+            <a href="/companies/{{ c.symbol }}/" target="_blank"
+               class="text-blue-400 hover:text-blue-300 transition-colors text-xs font-medium">View</a>
+            <span class="text-slate-600 mx-1">|</span>
+            <a href="/admin-insights/recalculate/{{ c.symbol }}/"
+               class="text-amber-400 hover:text-amber-300 transition-colors text-xs font-medium">Rescore</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="px-4 py-12 text-center text-slate-500">No companies scored yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const searchInput  = document.getElementById('hm-search');
+  const labelFilter  = document.getElementById('hm-label-filter');
+  const sectorFilter = document.getElementById('hm-sector-filter');
+
+  function filterRows() {
+    const q      = searchInput.value.toLowerCase();
+    const label  = labelFilter.value;
+    const sector = sectorFilter.value;
+    document.querySelectorAll('.hm-row').forEach(function (row) {
+      const matchQ      = !q      || row.dataset.name.includes(q) || row.dataset.symbol.includes(q);
+      const matchLabel  = !label  || row.dataset.label === label;
+      const matchSector = !sector || row.dataset.sector === sector;
+      row.style.display = (matchQ && matchLabel && matchSector) ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', filterRows);
+  labelFilter.addEventListener('change', filterRows);
+  sectorFilter.addEventListener('change', filterRows);
+})();
+</script>
+{% endblock %}

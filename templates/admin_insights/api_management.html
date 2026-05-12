@@ -1,0 +1,152 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}API Management — B100 Admin{% endblock %}
+{% block page_title %}API Key Management{% endblock %}
+{% block page_subtitle %}Manage partner API keys and usage quotas{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Keys</div>
+    <div class="text-2xl font-extrabold text-white">{{ total_keys|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Active Keys</div>
+    <div class="text-2xl font-extrabold text-emerald-400">{{ active_keys|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Calls Today</div>
+    <div class="text-2xl font-extrabold text-blue-400">{{ calls_today|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Quota Exceeded</div>
+    <div class="text-2xl font-extrabold text-red-400">{{ quota_exceeded|default:"0" }}</div>
+  </div>
+</div>
+
+<!-- Create new key -->
+<div class="rounded-xl border p-5 mb-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <h3 class="text-sm font-semibold text-slate-300 mb-4">Create New API Key</h3>
+  <form method="post" action="/admin-insights/api-management/create/" class="flex flex-wrap gap-3">
+    {% csrf_token %}
+    <input type="text" name="partner_name" placeholder="Partner / App name"
+           required
+           class="flex-1 min-w-40 text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+    <input type="email" name="contact_email" placeholder="Contact email"
+           class="flex-1 min-w-40 text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+    <select name="tier" class="text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+      <option value="free">Free (1K/day)</option>
+      <option value="basic">Basic (10K/day)</option>
+      <option value="pro">Pro (100K/day)</option>
+      <option value="enterprise">Enterprise (Unlimited)</option>
+    </select>
+    <button type="submit"
+            class="text-sm font-semibold px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+      Generate Key
+    </button>
+  </form>
+</div>
+
+<!-- Partners table -->
+<div class="rounded-xl border overflow-hidden" style="background:#1a2f47;border-color:#1e3d5c">
+  <div class="flex items-center justify-between px-5 py-3 border-b" style="border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300">API Partners</h3>
+    <input type="text" id="api-search" placeholder="Search partner..."
+           class="text-xs border rounded-lg px-3 py-1.5 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr style="background:#142036;border-bottom:1px solid #1e3d5c">
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Partner</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Key (masked)</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Tier</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Usage Today</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Quota</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Total Calls</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Created</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="api-tbody" class="divide-y" style="border-color:#1e3d5c">
+        {% for partner in partners %}
+        <tr class="api-row hover:bg-white/5 transition-colors" data-name="{{ partner.name|lower }}">
+          <td class="px-4 py-3">
+            <div class="font-semibold text-slate-200">{{ partner.name }}</div>
+            <div class="text-slate-500">{{ partner.contact_email }}</div>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            <code class="text-slate-400 font-mono text-xs bg-slate-800 px-2 py-0.5 rounded">{{ partner.key_masked }}</code>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded
+              {% if partner.tier == 'enterprise' %}bg-purple-900 text-purple-300
+              {% elif partner.tier == 'pro' %}bg-blue-900 text-blue-300
+              {% elif partner.tier == 'basic' %}bg-sky-900 text-sky-300
+              {% else %}bg-slate-700 text-slate-400{% endif %}">
+              {{ partner.tier|title }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <div class="w-20 bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                <div class="h-1.5 rounded-full
+                  {% if partner.usage_pct >= 90 %}bg-red-500{% elif partner.usage_pct >= 70 %}bg-amber-400{% else %}bg-emerald-500{% endif %}"
+                  style="width: {{ partner.usage_pct|default:0 }}%"></div>
+              </div>
+              <span class="font-semibold text-slate-200">{{ partner.calls_today|default:"0" }}</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell text-slate-400">
+            {{ partner.daily_limit|default:"∞" }}
+          </td>
+          <td class="px-4 py-3 text-right hidden lg:table-cell text-slate-300">
+            {{ partner.total_calls|default:"0" }}
+          </td>
+          <td class="px-4 py-3 text-right hidden lg:table-cell text-slate-500">
+            {{ partner.created_at|date:"d M Y"|default:"—" }}
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if partner.is_active %}
+            <span class="text-xs font-semibold bg-emerald-900 text-emerald-300 px-1.5 py-0.5 rounded">Active</span>
+            {% else %}
+            <span class="text-xs font-semibold bg-red-900 text-red-300 px-1.5 py-0.5 rounded">Disabled</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <a href="/admin-insights/api-management/{{ partner.id }}/rotate/"
+                 class="text-amber-400 hover:text-amber-300 transition-colors font-medium"
+                 onclick="return confirm('Rotate this key? The old key will stop working immediately.')">
+                Rotate
+              </a>
+              <span class="text-slate-700">|</span>
+              <a href="/admin-insights/api-management/{{ partner.id }}/toggle/"
+                 class="{% if partner.is_active %}text-red-400 hover:text-red-300{% else %}text-emerald-400 hover:text-emerald-300{% endif %} transition-colors font-medium">
+                {% if partner.is_active %}Disable{% else %}Enable{% endif %}
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="px-4 py-12 text-center text-slate-500">No API partners yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('api-search').addEventListener('input', function () {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.api-row').forEach(function (row) {
+    row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

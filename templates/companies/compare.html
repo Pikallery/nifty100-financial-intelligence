@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compare Companies — B100 Intelligence{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Compare Companies</h1>
+    <p class="text-sm text-slate-500 mt-1">Select up to 4 Nifty 100 companies for side-by-side comparison</p>
+  </div>
+
+  <!-- ============================================================ COMPANY SELECTOR ============================================================ -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-6">
+    <h2 class="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4">Select Companies</h2>
+
+    <div class="flex flex-wrap gap-3 mb-4" id="selected-chips">
+      <!-- Chips will be rendered here by JS -->
+    </div>
+
+    <div class="relative max-w-md" id="compare-search-wrapper">
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+            </svg>
+          </div>
+          <input type="text" id="compare-search"
+                 placeholder="Type company name or symbol..."
+                 class="w-full border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-300 transition-all"
+                 autocomplete="off" />
+        </div>
+        <button id="compare-go"
+                class="bg-navy-800 hover:bg-navy-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
+          Compare
+        </button>
+      </div>
+      <div id="compare-dropdown"
+           class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 hidden z-50 max-h-64 overflow-y-auto">
+        <div id="compare-results"></div>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-400 mt-2">Select 2–4 companies. Click a chip to remove.</p>
+  </div>
+
+  <!-- ============================================================ COMPARISON TABLE ============================================================ -->
+  <div id="compare-loading" class="hidden flex items-center justify-center py-12">
+    <svg class="animate-spin h-6 w-6 text-navy-600 mr-2" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+    <span class="text-slate-500 text-sm">Loading comparison...</span>
+  </div>
+
+  <div id="compare-section" class="{% if not compare_data %}hidden{% endif %}">
+
+    <!-- Header row with company logos -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-5">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="compare-table">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50">
+              <th class="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider w-44">Metric</th>
+              <!-- Company headers injected by JS -->
+              <th id="th-1" class="px-5 py-4 text-center hidden"></th>
+              <th id="th-2" class="px-5 py-4 text-center hidden"></th>
+              <th id="th-3" class="px-5 py-4 text-center hidden"></th>
+              <th id="th-4" class="px-5 py-4 text-center hidden"></th>
+            </tr>
+          </thead>
+          <tbody id="compare-tbody" class="divide-y divide-slate-100">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue overlay chart -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <h2 class="text-sm font-semibold text-slate-700 mb-4">Revenue Trend Comparison</h2>
+      <div class="h-64">
+        <canvas id="compare-chart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Empty state -->
+  <div id="compare-empty" class="{% if compare_data %}hidden{% endif %} text-center py-16 text-slate-400">
+    <svg class="h-16 w-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    </svg>
+    <p class="text-base font-medium">No companies selected yet</p>
+    <p class="text-sm mt-1">Search and add 2–4 companies above to start comparing</p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  const MAX_COMPANIES = 4;
+  let selectedSymbols = [];
+  let compareChartInstance = null;
+
+  const CHART_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6'];
+
+  const searchInput     = document.getElementById('compare-search');
+  const dropdown        = document.getElementById('compare-dropdown');
+  const resultsList     = document.getElementById('compare-results');
+  const chipsContainer  = document.getElementById('selected-chips');
+  const goBtn           = document.getElementById('compare-go');
+  const compareSection  = document.getElementById('compare-section');
+  const compareEmpty    = document.getElementById('compare-empty');
+  const compareLoading  = document.getElementById('compare-loading');
+  const compareTbody    = document.getElementById('compare-tbody');
+
+  // ---- Autocomplete ----
+  let searchTimer;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    const q = searchInput.value.trim();
+    if (!q) { dropdown.classList.add('hidden'); return; }
+    searchTimer = setTimeout(function () {
+      fetch('/api/v1/companies/?search=' + encodeURIComponent(q) + '&limit=8')
+        .then(r => r.json())
+        .then(data => {
+          const results = (data.results || data).filter(c => !selectedSymbols.includes(c.symbol));
+          renderDropdown(results);
+        });
+    }, 200);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!document.getElementById('compare-search-wrapper').contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  function renderDropdown(companies) {
+    resultsList.innerHTML = '';
+    if (!companies.length) {
+      resultsList.innerHTML = '<div class="px-4 py-3 text-sm text-slate-400">No results</div>';
+      dropdown.classList.remove('hidden');
+      return;
+    }
+    companies.forEach(function (c) {
+      const el = document.createElement('div');
+      el.className = 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors';
+      el.innerHTML = `
+        <div class="w-7 h-7 rounded-full bg-navy-50 flex items-center justify-center shrink-0 text-xs font-bold text-navy-700">${(c.symbol||'').slice(0,2)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-slate-800 truncate">${c.name}</div>
+          <div class="text-xs text-slate-400">${c.symbol} &middot; ${c.sector||''}</div>
+        </div>`;
+      el.addEventListener('click', function () {
+        addCompany(c);
+        searchInput.value = '';
+        dropdown.classList.add('hidden');
+      });
+      resultsList.appendChild(el);
+    });
+    dropdown.classList.remove('hidden');
+  }
+
+  function addCompany(c) {
+    if (selectedSymbols.length >= MAX_COMPANIES) return;
+    if (selectedSymbols.includes(c.symbol)) return;
+    selectedSymbols.push(c.symbol);
+    renderChips();
+    updateGoButton();
+  }
+
+  function removeCompany(symbol) {
+    selectedSymbols = selectedSymbols.filter(s => s !== symbol);
+    renderChips();
+    updateGoButton();
+    if (selectedSymbols.length < 2) {
+      compareSection.classList.add('hidden');
+      compareEmpty.classList.remove('hidden');
+    }
+  }
+
+  function renderChips() {
+    chipsContainer.innerHTML = '';
+    if (!selectedSymbols.length) {
+      chipsContainer.innerHTML = '<span class="text-sm text-slate-400 italic">No companies selected</span>';
+      return;
+    }
+    selectedSymbols.forEach(function (sym, i) {
+      const chip = document.createElement('div');
+      chip.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold text-white cursor-pointer hover:opacity-90 transition-opacity';
+      chip.style.backgroundColor = CHART_COLORS[i] || '#64748b';
+      chip.innerHTML = `${sym} <span class="text-white/70 hover:text-white text-base leading-none">&times;</span>`;
+      chip.addEventListener('click', function () { removeCompany(sym); });
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  function updateGoButton() {
+    goBtn.disabled = selectedSymbols.length < 2;
+  }
+
+  // ---- Compare GO ----
+  goBtn.addEventListener('click', function () {
+    if (selectedSymbols.length < 2) return;
+    fetchComparison();
+  });
+
+  function fetchComparison() {
+    compareLoading.classList.remove('hidden');
+    compareSection.classList.add('hidden');
+    compareEmpty.classList.add('hidden');
+
+    const params = selectedSymbols.map(s => 'symbol=' + s).join('&');
+    fetch('/api/v1/companies/compare/?' + params)
+      .then(r => r.json())
+      .then(data => {
+        compareLoading.classList.add('hidden');
+        renderComparison(data);
+        compareSection.classList.remove('hidden');
+      })
+      .catch(function () {
+        compareLoading.classList.add('hidden');
+        compareEmpty.classList.remove('hidden');
+        compareEmpty.querySelector('p').textContent = 'Failed to load comparison data.';
+      });
+  }
+
+  function renderComparison(data) {
+    const companies = data.companies || [];
+    if (!companies.length) return;
+
+    // Render column headers
+    for (let i = 0; i < 4; i++) {
+      const th = document.getElementById('th-' + (i + 1));
+      if (i < companies.length) {
+        const c = companies[i];
+        th.innerHTML = `
+          <div class="flex flex-col items-center gap-1">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-sm text-navy-700">${(c.symbol||'').slice(0,2)}</div>
+            <div class="font-semibold text-slate-800 text-xs leading-tight text-center">${c.name}</div>
+            <a href="/companies/${c.symbol}/" class="text-xs text-navy-600 hover:underline">${c.symbol}</a>
+          </div>`;
+        th.classList.remove('hidden');
+      } else {
+        th.classList.add('hidden');
+      }
+    }
+
+    // Metrics to show
+    const metrics = [
+      { key: 'health_score',    label: 'Health Score',    format: v => v != null ? v : '—',         highlight: 'higher' },
+      { key: 'health_label',    label: 'Health Label',    format: v => v || '—',                     highlight: 'none' },
+      { key: 'revenue_cr',      label: 'Revenue (Cr)',    format: v => v != null ? '₹' + formatNum(v) : '—', highlight: 'higher' },
+      { key: 'net_profit_cr',   label: 'Net Profit (Cr)', format: v => v != null ? '₹' + formatNum(v) : '—', highlight: 'higher' },
+      { key: 'opm_pct',         label: 'OPM %',           format: v => v != null ? v + '%' : '—',   highlight: 'higher' },
+      { key: 'npm_pct',         label: 'Net Margin %',    format: v => v != null ? v + '%' : '—',   highlight: 'higher' },
+      { key: 'roe_pct',         label: 'ROE %',           format: v => v != null ? v + '%' : '—',   highlight: 'higher' },
+      { key: 'debt_to_equity',  label: 'D/E Ratio',       format: v => v != null ? v : '—',         highlight: 'lower' },
+      { key: 'interest_coverage',label:'Interest Coverage',format: v => v != null ? v + 'x' : '—', highlight: 'higher' },
+      { key: 'eps',             label: 'EPS (Rs)',         format: v => v != null ? v : '—',         highlight: 'higher' },
+      { key: 'market_cap_cr',   label: 'Market Cap (Cr)', format: v => v != null ? '₹' + formatNum(v) : '—', highlight: 'none' },
+      { key: 'sector',          label: 'Sector',          format: v => v || '—',                    highlight: 'none' },
+    ];
+
+    compareTbody.innerHTML = metrics.map(function (m) {
+      const values  = companies.map(c => c[m.key]);
+      const numVals = values.filter(v => typeof v === 'number');
+      const best    = m.highlight === 'higher' ? Math.max(...numVals) : (m.highlight === 'lower' ? Math.min(...numVals) : null);
+
+      const cells = companies.map(function (c, i) {
+        const raw  = c[m.key];
+        const disp = m.format(raw);
+        const isBest = m.highlight !== 'none' && typeof raw === 'number' && raw === best;
+        return `<td class="px-5 py-3 text-center text-sm ${isBest ? 'font-bold text-emerald-600' : 'text-slate-700'}">${disp}${isBest ? ' <span title="Best" class="text-emerald-400">&#9733;</span>' : ''}</td>`;
+      });
+      // Pad for missing companies
+      for (let i = companies.length; i < MAX_COMPANIES; i++) cells.push('');
+
+      return `<tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">${m.label}</td>
+        ${cells.join('')}
+      </tr>`;
+    }).join('');
+
+    // ---- Revenue overlay chart ----
+    if (compareChartInstance) { compareChartInstance.destroy(); }
+    if (data.revenue_chart) {
+      const rc = data.revenue_chart;
+      compareChartInstance = new Chart(document.getElementById('compare-chart'), {
+        type: 'line',
+        data: {
+          labels: rc.years,
+          datasets: companies.map(function (c, i) {
+            return {
+              label: c.symbol,
+              data: rc.data[c.symbol] || [],
+              borderColor: CHART_COLORS[i],
+              backgroundColor: CHART_COLORS[i] + '20',
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4,
+              pointBackgroundColor: CHART_COLORS[i],
+            };
+          }),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, color: '#64748b' } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => '₹' + formatNum(v) } },
+          },
+        },
+      });
+    }
+  }
+
+  function formatNum(n) {
+    if (n >= 1e5) return (n / 1e5).toFixed(1) + 'L';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n;
+  }
+
+  // Initialise chips
+  renderChips();
+
+  // Pre-populate if symbols in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const preSymbols = urlParams.getAll('symbol');
+  if (preSymbols.length >= 2) {
+    preSymbols.slice(0, MAX_COMPANIES).forEach(function (sym) {
+      if (!selectedSymbols.includes(sym)) selectedSymbols.push(sym);
+    });
+    renderChips();
+    updateGoButton();
+    fetchComparison();
+  }
+})();
+</script>
+{% endblock %}

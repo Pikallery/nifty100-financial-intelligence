@@ -1,0 +1,127 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Data Quality — B100 Admin{% endblock %}
+{% block page_title %}Data Quality Matrix{% endblock %}
+{% block page_subtitle %}Company × year coverage grid — highlights missing data{% endblock %}
+
+{% block content %}
+
+<!-- Summary cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Overall Fill Rate</div>
+    <div class="text-2xl font-extrabold {% if overall_fill_rate >= 90 %}text-emerald-400{% elif overall_fill_rate >= 70 %}text-yellow-400{% else %}text-red-400{% endif %}">
+      {{ overall_fill_rate|default:"—" }}{% if overall_fill_rate %}%{% endif %}
+    </div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Fully Complete</div>
+    <div class="text-2xl font-extrabold text-emerald-400">{{ fully_complete|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Companies</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Partial Data</div>
+    <div class="text-2xl font-extrabold text-yellow-400">{{ partial_data|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Companies</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">No Data</div>
+    <div class="text-2xl font-extrabold text-red-400">{{ no_data|default:"—" }}</div>
+    <div class="text-xs text-slate-500 mt-0.5">Companies</div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="flex flex-wrap items-center gap-4 mb-3 text-xs text-slate-400">
+  <span class="font-semibold text-slate-300">Legend:</span>
+  <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-emerald-600 opacity-90"></span> Complete (all fields)</span>
+  <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-yellow-500 opacity-90"></span> Partial (&ge;50%)</span>
+  <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-red-600 opacity-90"></span> Sparse (&lt;50%)</span>
+  <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-slate-700"></span> No data</span>
+</div>
+
+<!-- Filter -->
+<div class="flex gap-3 mb-3">
+  <input type="text" id="dq-search" placeholder="Search company..."
+         class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+  <select id="dq-filter" class="text-xs border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+    <option value="">All</option>
+    <option value="complete">Complete only</option>
+    <option value="partial">Partial only</option>
+    <option value="missing">Has missing</option>
+  </select>
+</div>
+
+<!-- Grid matrix -->
+<div class="rounded-xl border overflow-hidden" style="background:#1a2f47;border-color:#1e3d5c">
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs" id="dq-matrix">
+      <thead>
+        <tr style="background:#142036;border-bottom:1px solid #1e3d5c">
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider sticky left-0" style="background:#142036;min-width:180px">Company</th>
+          {% for year in fiscal_years %}
+          <th class="text-center px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider min-w-16">FY{{ year }}</th>
+          {% empty %}
+          {% for yr in "2020,2021,2022,2023,2024"|split:"," %}
+          <th class="text-center px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider min-w-16">FY{{ yr }}</th>
+          {% endfor %}
+          {% endfor %}
+          <th class="text-center px-3 py-3 text-slate-500 font-semibold uppercase tracking-wider">Fill %</th>
+        </tr>
+      </thead>
+      <tbody id="dq-tbody" class="divide-y" style="border-color:#1e3d5c">
+        {% for row in data_matrix %}
+        <tr class="dq-row hover:bg-white/5 transition-colors" data-name="{{ row.company_name|lower }}" data-quality="{{ row.quality }}">
+          <td class="px-4 py-2.5 sticky left-0" style="background:#1a2f47">
+            <a href="/companies/{{ row.symbol }}/" target="_blank" class="font-semibold text-slate-200 hover:text-blue-400 transition-colors">{{ row.company_name }}</a>
+            <div class="text-slate-500">{{ row.symbol }}</div>
+          </td>
+          {% for cell in row.years %}
+          <td class="px-3 py-2.5 text-center">
+            <div class="w-8 h-8 mx-auto rounded flex items-center justify-center text-xs font-bold cursor-help
+              {% if cell.fill_rate == 100 %}bg-emerald-600/80 text-emerald-100
+              {% elif cell.fill_rate >= 50 %}bg-yellow-500/70 text-yellow-100
+              {% elif cell.fill_rate > 0 %}bg-red-600/70 text-red-100
+              {% else %}bg-slate-700 text-slate-500{% endif %}"
+              title="{{ cell.fill_rate }}% complete ({{ cell.filled }}/{{ cell.total }} fields)">
+              {% if cell.fill_rate == 100 %}✓
+              {% elif cell.fill_rate == 0 %}—
+              {% else %}{{ cell.fill_rate }}{% endif %}
+            </div>
+          </td>
+          {% endfor %}
+          <td class="px-3 py-2.5 text-center">
+            <span class="font-bold {% if row.avg_fill >= 90 %}text-emerald-400{% elif row.avg_fill >= 60 %}text-yellow-400{% else %}text-red-400{% endif %}">
+              {{ row.avg_fill|default:"—" }}{% if row.avg_fill %}%{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="px-4 py-12 text-center text-slate-500">No quality matrix data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const searchInp = document.getElementById('dq-search');
+  const filterSel = document.getElementById('dq-filter');
+
+  function filter() {
+    const q   = searchInp.value.toLowerCase();
+    const qlt = filterSel.value;
+    document.querySelectorAll('.dq-row').forEach(function (row) {
+      const nameMatch    = !q   || row.dataset.name.includes(q);
+      const qualityMatch = !qlt || row.dataset.quality === qlt;
+      row.style.display  = (nameMatch && qualityMatch) ? '' : 'none';
+    });
+  }
+  searchInp.addEventListener('input', filter);
+  filterSel.addEventListener('change', filter);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "admin_insights/base.html" %}
+
+{% block title %}Webhooks — B100 Admin{% endblock %}
+{% block page_title %}Webhook Management{% endblock %}
+{% block page_subtitle %}Manage outgoing webhook subscriptions and delivery logs{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Subscriptions</div>
+    <div class="text-2xl font-extrabold text-white">{{ total_subscriptions|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Active</div>
+    <div class="text-2xl font-extrabold text-emerald-400">{{ active_subscriptions|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Deliveries Today</div>
+    <div class="text-2xl font-extrabold text-blue-400">{{ deliveries_today|default:"—" }}</div>
+  </div>
+  <div class="rounded-xl border p-4" style="background:#1a2f47;border-color:#1e3d5c">
+    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Failure Rate</div>
+    <div class="text-2xl font-extrabold {% if failure_rate_pct <= 2 %}text-emerald-400{% elif failure_rate_pct <= 10 %}text-yellow-400{% else %}text-red-400{% endif %}">
+      {{ failure_rate_pct|default:"0" }}%
+    </div>
+  </div>
+</div>
+
+<!-- Create webhook -->
+<div class="rounded-xl border p-5 mb-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <h3 class="text-sm font-semibold text-slate-300 mb-4">Add Webhook Subscription</h3>
+  <form method="post" action="/admin-insights/webhooks/create/" class="flex flex-wrap gap-3">
+    {% csrf_token %}
+    <input type="url" name="endpoint_url" placeholder="https://your-server.com/webhook"
+           required
+           class="flex-1 min-w-56 text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+    <select name="event_type" class="text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer">
+      <option value="health_score_updated">health_score_updated</option>
+      <option value="anomaly_detected">anomaly_detected</option>
+      <option value="data_imported">data_imported</option>
+      <option value="company_updated">company_updated</option>
+    </select>
+    <input type="text" name="partner_name" placeholder="Partner name (optional)"
+           class="text-sm border rounded-lg px-3 py-2 bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+    <button type="submit"
+            class="text-sm font-semibold px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+      Subscribe
+    </button>
+  </form>
+</div>
+
+<!-- Subscriptions table -->
+<div class="rounded-xl border overflow-hidden mb-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <div class="px-5 py-3 border-b" style="border-color:#1e3d5c">
+    <h3 class="text-sm font-semibold text-slate-300">Active Subscriptions</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr style="background:#142036;border-bottom:1px solid #1e3d5c">
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Endpoint</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Event</th>
+          <th class="text-left px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Partner</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Delivered</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Failed</th>
+          <th class="text-right px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Last Fire</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+          <th class="text-center px-4 py-3 text-slate-500 font-semibold uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y" style="border-color:#1e3d5c">
+        {% for sub in subscriptions %}
+        <tr class="hover:bg-white/5 transition-colors">
+          <td class="px-4 py-3">
+            <div class="font-mono text-slate-300 text-xs truncate max-w-xs">{{ sub.endpoint_url }}</div>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            <span class="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-mono text-xs">{{ sub.event_type }}</span>
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell text-slate-400">{{ sub.partner_name|default:"—" }}</td>
+          <td class="px-4 py-3 text-right text-emerald-400 font-semibold">{{ sub.delivered_count|default:"0" }}</td>
+          <td class="px-4 py-3 text-right {% if sub.failed_count > 0 %}text-red-400{% else %}text-slate-500{% endif %} font-semibold">
+            {{ sub.failed_count|default:"0" }}
+          </td>
+          <td class="px-4 py-3 text-right hidden lg:table-cell text-slate-500">
+            {{ sub.last_fired_at|date:"d M H:i"|default:"Never" }}
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if sub.is_active %}
+            <span class="text-xs font-semibold bg-emerald-900 text-emerald-300 px-1.5 py-0.5 rounded">Active</span>
+            {% else %}
+            <span class="text-xs font-semibold bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">Paused</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <a href="/admin-insights/webhooks/{{ sub.id }}/test/"
+                 class="text-blue-400 hover:text-blue-300 transition-colors font-medium">Test</a>
+              <span class="text-slate-700">|</span>
+              <a href="/admin-insights/webhooks/{{ sub.id }}/toggle/"
+                 class="{% if sub.is_active %}text-amber-400 hover:text-amber-300{% else %}text-emerald-400 hover:text-emerald-300{% endif %} transition-colors font-medium">
+                {% if sub.is_active %}Pause{% else %}Resume{% endif %}
+              </a>
+              <span class="text-slate-700">|</span>
+              <a href="/admin-insights/webhooks/{{ sub.id }}/delete/"
+                 class="text-red-400 hover:text-red-300 transition-colors font-medium"
+                 onclick="return confirm('Delete this webhook subscription?')">Delete</a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="px-4 py-12 text-center text-slate-500">No webhook subscriptions yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Recent delivery log -->
+<div class="rounded-xl border p-5" style="background:#1a2f47;border-color:#1e3d5c">
+  <h3 class="text-sm font-semibold text-slate-300 mb-4">Recent Delivery Log</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b" style="border-color:#1e3d5c">
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Time</th>
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Endpoint</th>
+          <th class="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Event</th>
+          <th class="text-center py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">HTTP</th>
+          <th class="text-right py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Duration</th>
+          <th class="text-center py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider">Result</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y" style="border-color:#1e3d5c">
+        {% for log in delivery_logs %}
+        <tr class="hover:bg-white/5 transition-colors">
+          <td class="py-2 px-3 text-slate-500">{{ log.fired_at|date:"d M H:i:s" }}</td>
+          <td class="py-2 px-3 font-mono text-slate-400 max-w-xs truncate">{{ log.endpoint_url }}</td>
+          <td class="py-2 px-3 hidden sm:table-cell">
+            <span class="bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-mono text-xs">{{ log.event_type }}</span>
+          </td>
+          <td class="py-2 px-3 text-center">
+            <span class="font-mono font-bold {% if log.http_status < 300 %}text-emerald-400{% elif log.http_status < 500 %}text-amber-400{% else %}text-red-400{% endif %}">
+              {{ log.http_status|default:"—" }}
+            </span>
+          </td>
+          <td class="py-2 px-3 text-right hidden md:table-cell text-slate-400">{{ log.duration_ms|default:"—" }}{% if log.duration_ms %}ms{% endif %}</td>
+          <td class="py-2 px-3 text-center">
+            {% if log.success %}
+            <span class="text-emerald-400">&#10003;</span>
+            {% else %}
+            <span class="text-red-400" title="{{ log.error_message }}">&#10007;</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-8 text-center text-slate-500">No deliveries yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
