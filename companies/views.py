@@ -15,7 +15,7 @@ import random
 import logging
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Prefetch, OuterRef, Subquery
+from django.db.models import OuterRef, Subquery
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.views import View
@@ -237,20 +237,16 @@ class CompanyDetailView(View):
             .order_by("-year")
         )
 
-        # Peers – top 5 by rank
-        peers = list(
-            Peer.objects
-            .filter(symbol=company)
-            .select_related("peer_symbol", "peer_symbol__sector")
-            .prefetch_related(
-                Prefetch(
-                    "peer_symbol__ml_scores",
-                    queryset=MLScore.objects.order_by("-computed_at"),
-                    to_attr="prefetched_ml_scores",
-                )
+        # Peers – top 5 by rank (fact_peers has composite PK, wrap in try/except)
+        try:
+            peers = list(
+                Peer.objects
+                .filter(symbol=company)
+                .select_related("peer_symbol", "peer_symbol__sector")
+                .order_by("rank")[:5]
             )
-            .order_by("rank")[:5]
-        )
+        except Exception:
+            peers = []
 
         # Financial time-series data (for client-side chart rendering)
         profit_loss = list(

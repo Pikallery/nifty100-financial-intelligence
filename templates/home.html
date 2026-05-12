@@ -118,7 +118,7 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
     {% for company in featured_companies %}
-    <a href="/companies/{{ company.symbol }}/"
+    <a href="/company/{{ company.symbol }}/"
        class="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-lg hover:border-navy-200 transition-all duration-200">
 
       <div class="flex items-start justify-between mb-4">
@@ -313,7 +313,7 @@
           } else {
             results.forEach(function (c) {
               const a = document.createElement('a');
-              a.href = '/companies/' + c.symbol + '/';
+              a.href = '/company/' + c.symbol + '/';
               a.className = 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors';
               a.innerHTML = `
                 <div class="w-8 h-8 rounded-full bg-navy-50 flex items-center justify-center shrink-0">
