@@ -211,17 +211,15 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ── Caching ───────────────────────────────────────────────────────────────────
+# Vercel is serverless — use LocMemCache (no persistent Redis needed for HTTP caching)
+# Redis is only used for Celery task queuing (separate worker)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "nifty100-cache",
         "TIMEOUT": 300,
-        "KEY_PREFIX": "nifty100",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
     }
 }
 

@@ -54,11 +54,11 @@
           <div class="mb-5">
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Health Label</label>
             <div class="space-y-1.5">
-              {% for label, color in health_labels %}
+              {% for item in health_labels %}
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="health_label" value="{{ label }}"
+                <input type="checkbox" name="health_label" value="{{ item.label }}"
                        class="health-label-cb w-4 h-4 rounded accent-navy-700 border-slate-300">
-                <span class="text-sm {{ color }} font-medium">{{ label }}</span>
+                <span class="text-sm font-medium" style="color:{{ item.color }}">{{ item.label }}</span>
               </label>
               {% empty %}
               {% for lbl in "EXCELLENT,GOOD,AVERAGE,WEAK,POOR"|split:"," %}

@@ -401,12 +401,18 @@
       return;
     }
     tbody.innerHTML = companies.map(function (c, i) {
-      const logoHtml = c.logo_url
-        ? `<img src="${c.logo_url}" alt="${c.name}" class="w-full h-full object-contain p-0.5" />`
+      const name   = c.company_name || c.name || c.symbol;
+      const logo   = c.company_logo || c.logo_url || '';
+      const sector = c.sector_name  || c.sector  || '';
+      const opm    = c.opm_pct      != null ? c.opm_pct      : null;
+      const de     = c.de_ratio     != null ? c.de_ratio     : (c.debt_to_equity != null ? c.debt_to_equity : null);
+      const score  = c.overall_score != null ? c.overall_score : (c.health_score != null ? c.health_score : 0);
+      const logoHtml = logo
+        ? `<img src="${logo}" alt="${name}" class="w-full h-full object-contain p-0.5" />`
         : `<span class="text-navy-700 font-bold text-xs">${(c.symbol||'').slice(0,2)}</span>`;
-      const opmClass = (c.opm_pct >= 15) ? 'text-emerald-600' : (c.opm_pct >= 8 ? 'text-amber-600' : 'text-red-500');
-      const deClass  = (c.debt_to_equity <= 1) ? 'text-emerald-600' : (c.debt_to_equity <= 2 ? 'text-amber-600' : 'text-red-500');
-      const scoreW   = Math.min(100, Math.max(0, c.health_score || 0));
+      const opmClass = (opm >= 15) ? 'text-emerald-600' : (opm >= 8 ? 'text-amber-600' : 'text-red-500');
+      const deClass  = (de <= 1)   ? 'text-emerald-600' : (de <= 2  ? 'text-amber-600' : 'text-red-500');
+      const scoreW   = Math.min(100, Math.max(0, score || 0));
       const barCol   = scoreW >= 70 ? 'bg-emerald-500' : (scoreW >= 50 ? 'bg-yellow-400' : 'bg-red-400');
       return `
         <tr class="hover:bg-slate-50 transition-colors group">
@@ -415,19 +421,19 @@
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">${logoHtml}</div>
               <div>
-                <div class="font-semibold text-slate-800 leading-tight">${c.name}</div>
+                <div class="font-semibold text-slate-800 leading-tight">${name}</div>
                 <div class="text-xs text-slate-500">${c.symbol}</div>
               </div>
             </div>
           </td>
           <td class="px-4 py-3 hidden sm:table-cell">
-            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">${c.sector || ''}</span>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">${sector}</span>
           </td>
           <td class="px-4 py-3 text-center">
             <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${healthBadgeClass(c.health_label)}">${c.health_label || '—'}</span>
           </td>
-          <td class="px-4 py-3 text-right hidden md:table-cell"><span class="font-medium ${opmClass}">${c.opm_pct != null ? c.opm_pct + '%' : '—'}</span></td>
-          <td class="px-4 py-3 text-right hidden md:table-cell"><span class="font-medium ${deClass}">${c.debt_to_equity != null ? c.debt_to_equity : '—'}</span></td>
+          <td class="px-4 py-3 text-right hidden md:table-cell"><span class="font-medium ${opmClass}">${opm != null ? opm + '%' : '—'}</span></td>
+          <td class="px-4 py-3 text-right hidden md:table-cell"><span class="font-medium ${deClass}">${de != null ? de : '—'}</span></td>
           <td class="px-4 py-3 text-center hidden lg:table-cell">
             <div class="flex items-center justify-center gap-1.5">
               <div class="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
