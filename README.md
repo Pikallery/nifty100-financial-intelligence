@@ -2,9 +2,13 @@
 
 A full financial intelligence system for India's top 100 publicly listed companies (Nifty 100), covering data engineering, ML analytics, Power BI dashboards, and a Django REST API.
 
-## Live Dashboard
+## Live Links
 
-[View B100 Intelligence on Power BI Service](https://app.powerbi.com/groups/me/dashboards/c734a1ae-1d3e-47a9-838c-51eed14a88ae?ctid=5cd8bc41-efe1-4078-87ce-6b6701eb6973&pbi_source=linkShare)
+| | Link |
+|---|---|
+| 🌐 **Web App** | [nifty100-financial-intelligence.vercel.app](https://nifty100-financial-intelligence.vercel.app) |
+| 📊 **Power BI Dashboard** | [View on Power BI Service](https://app.powerbi.com/groups/me/dashboards/c734a1ae-1d3e-47a9-838c-51eed14a88ae?ctid=5cd8bc41-efe1-4078-87ce-6b6701eb6973&pbi_source=linkShare) |
+| 📖 **API Docs** | [nifty100-financial-intelligence.vercel.app/api/docs/](https://nifty100-financial-intelligence.vercel.app/api/docs/) |
 
 ---
 
