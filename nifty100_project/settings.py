@@ -78,8 +78,23 @@ TEMPLATES = [
 WSGI_APPLICATION = "nifty100_project.wsgi.application"
 
 # ── Database ──────────────────────────────────────────────────────────────────
-DATABASES = {
-    "default": {
+# Supports both individual vars (local) and DATABASE_URL (Neon/Vercel)
+_db_url = os.getenv("DATABASE_URL")
+if _db_url:
+    import urllib.parse as _up
+    _u = _up.urlparse(_db_url)
+    _db_config = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": _u.path.lstrip("/"),
+        "USER": _u.username,
+        "PASSWORD": _u.password,
+        "HOST": _u.hostname,
+        "PORT": str(_u.port or 5432),
+        "OPTIONS": {"sslmode": "require"},
+        "CONN_MAX_AGE": 60,
+    }
+else:
+    _db_config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "nifty100_warehouse"),
         "USER": os.getenv("DB_USER", "postgres"),
@@ -87,6 +102,11 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
+    }
+
+DATABASES = {
+    "default": {
+        **_db_config,
         "OPTIONS": {
             "connect_timeout": 10,
         },
