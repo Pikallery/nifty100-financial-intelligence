@@ -154,20 +154,7 @@
               </tr>
             </thead>
             <tbody id="companies-tbody" class="divide-y divide-slate-100">
-              {% if False %}{# JS renders all rows via /api/v1/companies/ — no server-side loop needed #}{% endif %}
-              {% if False %}{% empty %}
-              <tr>
-                <td colspan="8" class="px-4 py-16 text-center">
-                  <div class="text-slate-400">
-                    <svg class="h-12 w-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-sm font-medium">No companies match your filters</p>
-                    <p class="text-xs mt-1">Try adjusting your filter criteria</p>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
+              <!-- Rows are rendered by fetchCompanies() JavaScript below -->
             </tbody>
           </table>
         </div>
