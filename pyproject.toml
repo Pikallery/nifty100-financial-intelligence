@@ -1,0 +1,26 @@
+[project]
+name = "b100-intelligence"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "Django==4.2.16",
+    "djangorestframework==3.15.2",
+    "drf-spectacular==0.27.2",
+    "django-cors-headers==4.4.0",
+    "psycopg2-binary==2.9.9",
+    "SQLAlchemy==2.0.35",
+    "celery==5.4.0",
+    "redis==5.1.1",
+    "django-celery-beat==2.7.0",
+    "django-celery-results==2.5.1",
+    "pandas==2.2.3",
+    "numpy==1.26.4",
+    "scipy==1.14.1",
+    "scikit-learn==1.5.2",
+    "statsmodels==0.14.4",
+    "bcrypt==4.2.0",
+    "requests==2.32.3",
+    "python-dotenv==1.0.1",
+    "gunicorn==23.0.0",
+    "whitenoise==6.7.0",
+]
