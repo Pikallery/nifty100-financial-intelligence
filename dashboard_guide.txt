@@ -1,0 +1,452 @@
+================================================================================
+NIFTY 100 FINANCIAL INTELLIGENCE PLATFORM
+Dashboard Elements, Visualizations, Code Integration & GitHub Hosting Guide
+================================================================================
+
+
+================================================================================
+THE 7 DASHBOARDS — FULL VISUAL BREAKDOWN
+================================================================================
+
+--------------------------------------------------------------------------------
+DASHBOARD 1 — EXECUTIVE MARKET OVERVIEW
+--------------------------------------------------------------------------------
+
+PAGE 1: Market Snapshot
+-----------------------
+Visual                          | Type                  | Data Source                          | DAX Needed
+--------------------------------|-----------------------|--------------------------------------|---------------------------
+Total Nifty 100 Revenue         | KPI Card              | fact_profit_loss                     | SUM(sales) latest year
+Avg Net Profit Margin           | KPI Card              | fact_profit_loss                     | AVERAGE(net_profit_margin_pct)
+Companies by Health Label       | Donut Chart           | fact_ml_scores                       | Count by health_label
+Top 10 by Revenue               | Horizontal Bar        | fact_profit_loss + dim_company       | Ranked measure
+Bottom 10 by OPM%               | Horizontal Bar        | fact_profit_loss                     | Ranked measure
+Sector Avg OPM%                 | Clustered Bar         | fact_profit_loss + dim_sector        | Average by sector
+
+PAGE 2: Sector Performance
+--------------------------
+Visual                          | Type                  | Data Source
+--------------------------------|-----------------------|------------------------------------------
+Revenue by Sector               | Clustered Bar         | fact_profit_loss + dim_sector
+OPM% vs D/E scatter             | Scatter Plot          | fact_profit_loss + fact_balance_sheet
+Sector comparison matrix        | Matrix Table          | All fact tables
+Sector health distribution      | Stacked Bar           | fact_ml_scores + dim_sector
+
+PAGE 3: YoY Growth Tracker
+--------------------------
+Visual                          | Type                  | Data Source
+--------------------------------|-----------------------|------------------------------------------
+Aggregate revenue trend         | Line Chart            | fact_profit_loss + dim_year
+Aggregate net profit trend      | Line Chart            | fact_profit_loss + dim_year
+YoY growth % by year            | Waterfall Chart       | Calculated column
+Growth heatmap (sector x year)  | Matrix w/ cond. fmt   | fact_profit_loss + dim_sector + dim_year
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 2 — COMPANY DEEP DIVE (Most Important)
+--------------------------------------------------------------------------------
+
+PAGE 1: Financial Summary
+-------------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+Revenue + Net Profit            | Combo Chart           | Bar = revenue, Line = net profit
+OPM% trend with sector avg      | Line Chart            | Reference line = sector average
+Health Score                    | Gauge                 | 0-100, zones coloured by label
+Key metrics table               | Matrix                | Year-by-year: sales, profit, EPS, OPM%
+
+PAGE 2: Balance Sheet Health
+----------------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+D/E ratio trend                 | Line Chart            | Red zone above 2.0
+Asset composition               | 100% Stacked Bar      | Fixed assets / investments / other
+Borrowings vs Reserves          | Area Chart            | Two overlapping areas
+Equity ratio trend              | Line Chart            |
+
+PAGE 3: Cash Flow Analysis
+--------------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+Cash flow waterfall             | Waterfall Chart       | Operating / Investing / Financing
+Free cash flow trend            | Line Chart            | With 0 reference line
+Cash conversion ratio           | Line Chart            | With 1.0 reference line
+Operating cash vs Net Profit    | Clustered Bar         | Side by side
+
+PAGE 4: Growth and Returns
+--------------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+YoY sales growth bars           | Bar Chart             | Green = positive, Red = negative
+ROE vs sector average           | Line + Reference Line |
+EPS + Dividend history          | Dual-line Chart       |
+CAGR radar                      | Spider/Radar Chart    | 10Y / 5Y / 3Y overlaid
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 3 — SECTOR COMPARISON ANALYZER
+--------------------------------------------------------------------------------
+
+PAGE 1: Sector vs Sector
+------------------------
+Visual                          | Type
+--------------------------------|---------------------------------------------------
+Revenue side by side            | Clustered Bar (grouped by sector)
+OPM% comparison                 | Clustered Bar
+D/E comparison                  | Clustered Bar
+Net profit margin scatter       | Scatter (one point per sector)
+
+PAGE 2: Companies Within a Sector
+----------------------------------
+Visual                          | Type
+--------------------------------|---------------------------------------------------
+All companies ranked by revenue | Horizontal Bar
+Health score ranking            | Bar with conditional color
+OPM% ranking                    | Bar
+D/E ranking                     | Bar
+
+PAGE 3: Sector Trends Over Time
+--------------------------------
+Visual                          | Type
+--------------------------------|---------------------------------------------------
+Combined sector revenue         | Multi-line Chart
+Combined sector margins         | Multi-line Chart
+Year-by-year sector growth      | Small multiples line charts
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 4 — FINANCIAL HEALTH SCORECARD
+--------------------------------------------------------------------------------
+
+PAGE 1: Leaderboard
+-------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+All 100 companies ranked        | Table                 | Colour rows by health label
+Health label distribution       | Histogram             | Bar chart of score distribution
+Filter buttons                  | Slicer                | EXCELLENT / GOOD / AVERAGE / WEAK / POOR
+Avg score by sector             | Bar Chart             |
+
+PAGE 2: Company Score Breakdown
+--------------------------------
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+6 sub-scores                    | Radar Chart           | Profitability/Growth/Leverage/CF/Dividend/Trend
+Score history                   | Line Chart            | How overall score changed over time
+Sub-score cards                 | 6 KPI Cards           | One per dimension
+Pros list                       | Table                 | fact_pros_cons where is_pro = true
+Cons list                       | Table                 | fact_pros_cons where is_pro = false
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 5 — GROWTH AND VALUATION ANALYTICS
+--------------------------------------------------------------------------------
+
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+Revenue growth waterfall        | Waterfall             | Year over year aggregate
+CAGR scatter                    | Bubble Chart          | X=5Y sales CAGR, Y=5Y profit CAGR, Bubble=revenue
+Consistent growers list         | Table                 | Companies with 5+ consecutive growth years
+OPM% heatmap                    | Matrix                | Rows=companies, Columns=years, Colour=OPM%
+EPS growth ranking              | Horizontal Bar        | Top 20
+Earnings quality scatter        | Scatter               | X=EPS growth, Y=cash conversion ratio
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 6 — DEBT AND LEVERAGE MONITOR
+--------------------------------------------------------------------------------
+
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+D/E heatmap                     | Matrix                | Rows=companies, Columns=years, Red=high D/E
+D/E vs Interest Coverage        | Scatter               | Red quadrant: D/E>2 AND coverage<2
+Interest coverage ranking       | Horizontal Bar        |
+Debt-free companies             | Table                 | Where borrowings = 0
+Borrowings trend                | Area Chart            | For selected company
+Financing activity trend        | Line Chart            | From cash flow
+
+
+--------------------------------------------------------------------------------
+DASHBOARD 7 — DIVIDEND AND SHAREHOLDER RETURNS
+--------------------------------------------------------------------------------
+
+Visual                          | Type                  | Notes
+--------------------------------|-----------------------|------------------------------------------
+Avg dividend payout ranking     | Horizontal Bar        | Top 30
+Consistent dividend payers      | Table                 | Paid every year for 5+ years
+Payout ratio vs EPS growth      | Scatter               |
+Shareholder value radar         | Radar                 | ROE / Dividend consistency / EPS growth / Score
+Dividend history                | Line Chart            | For selected company
+ROE ranking                     | Bar Chart             |
+
+
+================================================================================
+HOW TO CONNECT YOUR CODE TO POWER BI
+================================================================================
+
+You do NOT embed Python code into Power BI reports.
+Power BI reads directly from PostgreSQL. The connection is:
+
+    Python ETL scripts --> PostgreSQL database --> Power BI reads from PostgreSQL
+
+--------------------------------------------------------------------------------
+STEP 1 — Run the pipeline first
+--------------------------------------------------------------------------------
+
+    python etl/02_clean_and_transform.py
+    python etl/03_load_to_warehouse.py
+    python ml/health_scorer.py
+
+This fills all the fact_* and dim_* tables in PostgreSQL.
+
+--------------------------------------------------------------------------------
+STEP 2 — Connect Power BI Desktop to PostgreSQL
+--------------------------------------------------------------------------------
+
+1. Open Power BI Desktop
+2. Home > Get Data > More > Database > PostgreSQL Database
+3. Enter:
+       Server:   localhost
+       Database: nifty100_warehouse
+4. Select Import mode (not DirectQuery — better performance)
+5. In the Navigator, tick all these tables:
+       dim_company, dim_year, dim_sector, dim_health_label
+       fact_profit_loss, fact_balance_sheet, fact_cash_flow
+       fact_analysis, fact_ml_scores, fact_pros_cons
+       documents, fact_peers
+
+--------------------------------------------------------------------------------
+STEP 3 — Build the star schema in Model view
+--------------------------------------------------------------------------------
+
+Draw these relationships in the Model tab:
+
+    dim_company[symbol]     <-->  fact_profit_loss[symbol]
+    dim_company[symbol]     <-->  fact_balance_sheet[symbol]
+    dim_company[symbol]     <-->  fact_cash_flow[symbol]
+    dim_company[symbol]     <-->  fact_ml_scores[symbol]
+    dim_company[symbol]     <-->  fact_pros_cons[symbol]
+    dim_company[symbol]     <-->  fact_analysis[symbol]
+    dim_year[year_id]       <-->  fact_profit_loss[year_id]
+    dim_year[year_id]       <-->  fact_balance_sheet[year_id]
+    dim_year[year_id]       <-->  fact_cash_flow[year_id]
+    dim_sector[sector_id]   <-->  dim_company[sector_id]
+
+--------------------------------------------------------------------------------
+STEP 4 — Key DAX measures to create
+--------------------------------------------------------------------------------
+
+YoY Revenue Growth %:
+    YoY Revenue Growth % =
+    VAR CurrentYear = MAX(dim_year[fiscal_year])
+    VAR CurrentSales = CALCULATE(SUM(fact_profit_loss[sales]),
+                                  dim_year[fiscal_year] = CurrentYear)
+    VAR PrevSales = CALCULATE(SUM(fact_profit_loss[sales]),
+                               dim_year[fiscal_year] = CurrentYear - 1)
+    RETURN DIVIDE(CurrentSales - PrevSales, PrevSales) * 100
+
+Latest Health Score (per company):
+    Latest Health Score =
+    CALCULATE(
+        MAX(fact_ml_scores[overall_score]),
+        TOPN(1, fact_ml_scores, fact_ml_scores[computed_at], DESC)
+    )
+
+Sector Avg OPM%:
+    Sector Avg OPM% =
+    AVERAGEX(
+        ALLEXCEPT(fact_profit_loss, dim_company[sector_id]),
+        fact_profit_loss[opm_percentage]
+    )
+
+--------------------------------------------------------------------------------
+STEP 5 — Publish to Power BI Service
+--------------------------------------------------------------------------------
+
+1. Home > Publish in Power BI Desktop
+2. Sign in with your Microsoft account
+3. Choose My Workspace
+4. Once published, go to app.powerbi.com
+5. Find your dataset > Settings > Data source credentials
+   Enter: Username: postgres | Password: Pradyumna123
+6. Scheduled refresh > Daily > 3:00 AM
+   (Runs after nightly ETL at 1AM and ML scoring at 2AM)
+
+--------------------------------------------------------------------------------
+HOW STREAM B NOTEBOOKS FEED THE DASHBOARDS
+--------------------------------------------------------------------------------
+
+Each notebook exports results back to PostgreSQL automatically.
+Power BI picks them up on next scheduled refresh.
+
+    Notebook                     | Writes to table       | Powers dashboard
+    -----------------------------|------------------------|---------------------------
+    02_health_scoring.ipynb      | fact_ml_scores        | Dashboard 4 (Health Scorecard)
+    03_anomaly_detection.ipynb   | fact_anomalies        | Admin dashboard anomaly page
+    04_sector_clustering.ipynb   | fact_clusters         | Dashboard 3 (Sector Analyzer)
+    05_peer_comparison.ipynb     | fact_peers            | Company detail page (Django)
+    06_forecasting.ipynb         | fact_forecasts        | Dashboard 5 (Growth Analytics)
+
+Each notebook writes with SQLAlchemy:
+    from sqlalchemy import create_engine
+    engine = create_engine("postgresql://postgres:Pradyumna123@localhost/nifty100_warehouse")
+    df_scores.to_sql("fact_ml_scores", engine, if_exists="replace", index=False)
+
+--------------------------------------------------------------------------------
+HOW CELERY KEEPS EVERYTHING IN SYNC AUTOMATICALLY
+--------------------------------------------------------------------------------
+
+    1:00 AM  -->  ETL pipeline runs (etl/03_load_to_warehouse.py)
+    2:00 AM  -->  ML scoring runs, updates fact_ml_scores
+    2:30 AM  -->  Anomaly detection runs
+    3:00 AM  -->  Power BI Service scheduled refresh fires
+                  All 7 dashboards show fresh data automatically
+
+When a company score changes by 2+ points:
+    --> Celery fires webhooks to channel partners
+    --> Django /api/partner/v1/ serves updated data
+
+
+================================================================================
+HOW TO HOST ON GITHUB
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT TO PUSH VS WHAT STAYS LOCAL
+--------------------------------------------------------------------------------
+
+PUSH TO GITHUB                          | KEEP LOCAL ONLY
+----------------------------------------|-----------------------------------
+All Python scripts (etl/, ml/)          | .env (has your DB password)
+All Django code (companies/, api/)      | data/raw/ and data/clean/
+All Jupyter notebooks                   | *.xlsx source data file
+All templates (templates/)              | *.pbix Power BI files
+docker-compose.yml                      | venv/ or .venv/
+requirements.txt                        |
+.env.example (no real values)           |
+.gitignore                              |
+
+--------------------------------------------------------------------------------
+YOUR .gitignore FILE
+--------------------------------------------------------------------------------
+
+# Credentials
+.env
+*.env
+
+# Generated data
+data/raw/
+data/clean/
+
+# Source data
+*.xlsx
+*.sql
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+
+# Power BI (large binaries)
+*.pbix
+
+# OS
+.DS_Store
+Thumbs.db
+
+--------------------------------------------------------------------------------
+YOUR .env.example FILE
+--------------------------------------------------------------------------------
+
+DB_NAME=nifty100_warehouse
+DB_USER=postgres
+DB_PASSWORD=
+DB_HOST=localhost
+DB_PORT=5432
+
+REDIS_URL=redis://localhost:6379/0
+
+DJANGO_SECRET_KEY=
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+--------------------------------------------------------------------------------
+STEP-BY-STEP: PUSH TO GITHUB
+--------------------------------------------------------------------------------
+
+Step 1 — Initialise the repo:
+    cd C:\Users\samal\nifty100_project
+    git init
+    git add .
+    git commit -m "Initial commit: Nifty 100 financial intelligence platform"
+
+Step 2 — Create repo on GitHub:
+    Go to github.com
+    Click New repository
+    Name it: nifty100-financial-intelligence
+    Do NOT add README or .gitignore (you already have them)
+    Click Create repository
+
+Step 3 — Push:
+    git remote add origin https://github.com/YOUR_USERNAME/nifty100-financial-intelligence.git
+    git branch -M main
+    git push -u origin main
+
+Step 4 — Verify on GitHub:
+    Open your repo on github.com
+    Confirm .env is NOT there (your gitignore should block it)
+    Confirm data/clean/ is NOT there
+    Confirm all Python scripts ARE there
+
+--------------------------------------------------------------------------------
+RECOMMENDED HOSTING STACK
+--------------------------------------------------------------------------------
+
+Component           | Service            | Notes
+--------------------|--------------------|-----------------------------------------
+PostgreSQL          | Supabase (free)    | Cloud DB, Power BI connects without gateway
+Django + Celery     | Railway.app        | Auto-deploys on git push
+Redis               | Railway.app        | Same project, one click
+Power BI dashboards | Power BI Service   | Free for personal workspace
+
+Your Procfile for Railway:
+    web: gunicorn nifty100_project.wsgi --bind 0.0.0.0:8000 --workers 2
+    worker: celery -A nifty100_project worker --loglevel=info
+    beat: celery -A nifty100_project beat --loglevel=info
+
+--------------------------------------------------------------------------------
+FULL HOSTING ARCHITECTURE
+--------------------------------------------------------------------------------
+
+    GitHub repo (code only, no data/credentials)
+            |
+            | auto-deploy on push
+            v
+       Railway
+       +------------------------------------------+
+       |  Django (web + API)                      |
+       |  Celery worker (nightly tasks)           |
+       |  Celery Beat (scheduler)                 |
+       +-------------------+----------------------+
+                           |
+                           v
+                  Supabase PostgreSQL  <--- ETL scripts run from
+                  (cloud database)         your PC or GitHub Actions
+                           |
+                           v
+                  Power BI Service
+                  (7 dashboards, scheduled
+                   refresh daily at 3AM)
+
+
+================================================================================
+END OF GUIDE
+================================================================================

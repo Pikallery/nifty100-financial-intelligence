@@ -1,0 +1,31 @@
+# Credentials
+.env
+*.env
+
+# Generated data
+data/raw/
+data/clean/
+
+# Source data
+*.xlsx
+*.sql
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+
+# OS
+.DS_Store
+Thumbs.db
