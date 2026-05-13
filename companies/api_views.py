@@ -122,8 +122,8 @@ class CompanyListAPIView(APIView):
             Company.objects.select_related("sector")
         )
 
-        # Search
-        q = request.query_params.get("q", "").strip()
+        # Search (accept both ?q= and ?search=)
+        q = (request.query_params.get("q") or request.query_params.get("search") or "").strip()
         if q:
             qs = qs.filter(
                 Q(symbol__icontains=q) | Q(company_name__icontains=q)
@@ -437,8 +437,8 @@ class ScreenerAPIView(APIView):
             Company.objects.select_related("sector")
         )
 
-        # ── Text search ───────────────────────────────────────────────────────
-        q = params.get("q", "").strip()
+        # ── Text search (accept both ?q= and ?search=) ────────────────────────
+        q = (params.get("q") or params.get("search") or "").strip()
         if q:
             qs = qs.filter(
                 Q(symbol__icontains=q) | Q(company_name__icontains=q)
