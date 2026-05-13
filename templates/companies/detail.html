@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}{{ company.company_name }} ({{ company.symbol }}) — B100 Intelligence{% endblock %}
 
@@ -11,11 +12,16 @@
     <div class="flex flex-col md:flex-row md:items-start gap-5">
 
       <!-- Logo -->
-      <div class="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+      <div class="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">
         {% if company.company_logo %}
-        <img src="{{ company.company_logo }}" alt="{{ company.company_name }}" class="w-full h-full object-contain p-2" />
+        <img src="{{ company.company_logo }}" alt="{{ company.symbol }}"
+             class="w-full h-full object-contain p-2"
+             onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <span class="hidden w-full h-full items-center justify-center text-white font-black text-2xl"
+              style="{{ company.symbol|symbol_color_style }}">{{ company.symbol|slice:":2" }}</span>
         {% else %}
-        <span class="text-navy-800 font-black text-2xl">{{ company.symbol|slice:":2" }}</span>
+        <span class="w-full h-full flex items-center justify-center text-white font-black text-2xl"
+              style="{{ company.symbol|symbol_color_style }}">{{ company.symbol|slice:":2" }}</span>
         {% endif %}
       </div>
 

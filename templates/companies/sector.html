@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}{{ sector.name }} Sector — B100 Intelligence{% endblock %}
 
@@ -107,16 +108,21 @@
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
-                      {% if company.logo_url %}
-                      <img src="{{ company.logo_url }}" alt="{{ company.name }}" class="w-full h-full object-contain p-0.5"/>
+                    <div class="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">
+                      {% if company.company_logo %}
+                      <img src="{{ company.company_logo }}" alt="{{ company.symbol }}"
+                           class="w-full h-full object-contain p-0.5"
+                           onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                      <span class="hidden w-full h-full items-center justify-center text-white font-bold text-xs"
+                            style="{{ company.symbol|symbol_color_style }}">{{ company.symbol|slice:":2" }}</span>
                       {% else %}
-                      <span class="text-navy-700 font-bold text-xs">{{ company.symbol|slice:":2" }}</span>
+                      <span class="w-full h-full flex items-center justify-center text-white font-bold text-xs"
+                            style="{{ company.symbol|symbol_color_style }}">{{ company.symbol|slice:":2" }}</span>
                       {% endif %}
                     </div>
                     <div>
-                      <a href="/companies/{{ company.symbol }}/"
-                         class="font-semibold text-slate-800 group-hover:text-navy-700 leading-tight text-sm transition-colors">{{ company.name }}</a>
+                      <a href="/company/{{ company.symbol }}/"
+                         class="font-semibold text-slate-800 group-hover:text-navy-700 leading-tight text-sm transition-colors">{{ company.company_name|default:company.symbol }}</a>
                       <div class="text-xs text-slate-400">{{ company.symbol }}</div>
                     </div>
                   </div>

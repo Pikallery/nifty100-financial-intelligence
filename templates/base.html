@@ -260,6 +260,32 @@
 
   <!-- ============================================================ GLOBAL JS ============================================================ -->
   <script>
+    // ---- Shared logo gradient helper (used by all JS-rendered logo avatars) ----
+    function symbolGradient(sym) {
+      var g = [
+        'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+        'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+        'linear-gradient(135deg,#10b981,#065f46)',
+        'linear-gradient(135deg,#f59e0b,#b45309)',
+        'linear-gradient(135deg,#f43f5e,#be123c)',
+        'linear-gradient(135deg,#06b6d4,#0e7490)',
+        'linear-gradient(135deg,#6366f1,#4338ca)',
+        'linear-gradient(135deg,#f97316,#c2410c)'
+      ];
+      var h = 0;
+      for (var i = 0; i < (sym||'').length; i++) h += (sym||'').charCodeAt(i);
+      return g[h % g.length];
+    }
+    function logoHtmlFor(sym, logo, size) {
+      size = size || '8';
+      var fontSize = size === '8' ? '0.75rem' : (size === '9' ? '0.8rem' : '0.875rem');
+      if (logo) {
+        return `<img src="${logo}" alt="${sym}" style="width:100%;height:100%;object-fit:contain;padding:2px"
+                     onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\\'display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:${symbolGradient(sym)};color:white;font-weight:700;font-size:${fontSize}\\'>${(sym||'??').slice(0,2)}</span>')"/>`;
+      }
+      return `<span style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:${symbolGradient(sym)};color:white;font-weight:700;font-size:${fontSize}">${(sym||'??').slice(0,2)}</span>`;
+    }
+
     // ---- Dark mode (runs before paint to avoid flash) ----
     (function () {
       const root = document.getElementById('html-root');
@@ -327,10 +353,8 @@
           const sector = c.sector_name  || c.sector  || '';
           const label  = c.health_label || (c.latest_score && c.latest_score.health_label) || '';
           el.innerHTML = `
-            <div class="w-8 h-8 rounded-full bg-navy-100 flex items-center justify-center shrink-0 overflow-hidden">
-              ${logo
-                ? `<img src="${logo}" alt="${name}" class="w-full h-full object-contain"/>`
-                : `<span class="text-navy-800 font-bold text-xs">${(c.symbol || '').slice(0,2)}</span>`}
+            <div class="w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center">
+              ${logoHtmlFor(c.symbol, logo)}
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-sm font-semibold text-slate-800 truncate">${name}</div>

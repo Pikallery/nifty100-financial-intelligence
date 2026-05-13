@@ -321,9 +321,7 @@
       const sector = c.sector_name  || c.sector  || '';
       const de     = c.de_ratio     != null ? c.de_ratio : (c.debt_to_equity != null ? c.debt_to_equity : null);
       const score  = c.overall_score != null ? c.overall_score : null;
-      const logoHtml = c.company_logo
-        ? `<div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0"><img src="${c.company_logo}" alt="${name}" class="w-full h-full object-contain p-0.5"/></div>`
-        : `<div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-navy-700 border border-slate-200 shrink-0">${(c.symbol||'').slice(0,2)}</div>`;
+      const logoHtml = `<div class="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">${logoHtmlFor(c.symbol, c.company_logo)}</div>`;
       return `
         <tr class="hover:bg-slate-50 transition-colors group">
           <td class="px-4 py-3 text-slate-400 text-xs">${i + 1}</td>

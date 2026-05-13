@@ -335,9 +335,7 @@
       const opm    = c.opm_pct      != null ? c.opm_pct      : null;
       const de     = c.de_ratio     != null ? c.de_ratio     : (c.debt_to_equity != null ? c.debt_to_equity : null);
       const score  = c.overall_score != null ? c.overall_score : (c.health_score != null ? c.health_score : 0);
-      const logoHtml = logo
-        ? `<img src="${logo}" alt="${name}" class="w-full h-full object-contain p-0.5" />`
-        : `<span class="text-navy-700 font-bold text-xs">${(c.symbol||'').slice(0,2)}</span>`;
+      const logoHtml = logoHtmlFor(c.symbol, logo);
       const opmClass = (opm >= 15) ? 'text-emerald-600' : (opm >= 8 ? 'text-amber-600' : 'text-red-500');
       const deClass  = (de <= 1)   ? 'text-emerald-600' : (de <= 2  ? 'text-amber-600' : 'text-red-500');
       const scoreW   = Math.min(100, Math.max(0, score || 0));
@@ -347,7 +345,7 @@
           <td class="px-4 py-3 text-slate-400 text-xs">${i + 1}</td>
           <td class="px-4 py-3">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">${logoHtml}</div>
+              <div class="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">${logoHtml}</div>
               <div>
                 <div class="font-semibold text-slate-800 leading-tight">${name}</div>
                 <div class="text-xs text-slate-500">${c.symbol}</div>
