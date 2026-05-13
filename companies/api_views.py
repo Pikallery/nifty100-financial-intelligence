@@ -37,7 +37,6 @@ from .models import (
     Forecast,
 )
 from .serializers import (
-    CompanyListSerializer,
     ProfitLossSerializer,
     BalanceSheetSerializer,
     CashFlowSerializer,
@@ -118,36 +117,62 @@ class CompanyListAPIView(APIView):
         ]
     )
     def get(self, request):
+        params = request.query_params
+
+        # Cache key covers every filter param so different queries get separate entries
+        cache_key = "company_list:" + ":".join(
+            f"{k}={v}" for k, v in sorted(params.items())
+        )
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        # Annotate with latest ML score fields + latest OPM + latest D/E in one query
+        latest_opm_sq = (
+            ProfitLoss.objects
+            .filter(symbol=OuterRef("symbol"), year__is_ttm=False)
+            .order_by("-year__sort_order")
+            .values("opm_percentage")[:1]
+        )
+        latest_de_sq = (
+            BalanceSheet.objects
+            .filter(symbol=OuterRef("symbol"), year__is_ttm=False)
+            .order_by("-year__sort_order")
+            .values("debt_to_equity")[:1]
+        )
         qs = _annotate_with_latest_score(
             Company.objects.select_related("sector")
+        ).annotate(
+            latest_opm=Subquery(latest_opm_sq),
+            latest_de=Subquery(latest_de_sq),
         )
 
         # Search (accept both ?q= and ?search=)
-        q = (request.query_params.get("q") or request.query_params.get("search") or "").strip()
+        q = (params.get("q") or params.get("search") or "").strip()
         if q:
             qs = qs.filter(
                 Q(symbol__icontains=q) | Q(company_name__icontains=q)
             )
 
         # Sector filter
-        sector = request.query_params.get("sector", "").strip()
+        sector = params.get("sector", "").strip()
         if sector:
             qs = qs.filter(sector__sector_name__icontains=sector)
 
         # Health label filter
-        health_label = request.query_params.get("health_label", "").strip().upper()
+        health_label = params.get("health_label", "").strip().upper()
         if health_label:
             qs = qs.filter(latest_health_label=health_label)
 
         # Banking filter
-        is_banking = request.query_params.get("is_banking", "").strip().lower()
+        is_banking = params.get("is_banking", "").strip().lower()
         if is_banking == "true":
             qs = qs.filter(is_banking=True)
         elif is_banking == "false":
             qs = qs.filter(is_banking=False)
 
         # Sorting
-        sort = request.query_params.get("sort", "score_desc")
+        sort = params.get("sort", "score_desc")
         sort_map = {
             "score_desc": "-latest_overall_score",
             "score_asc":  "latest_overall_score",
@@ -158,25 +183,41 @@ class CompanyListAPIView(APIView):
 
         # Pagination
         try:
-            page      = max(1, int(request.query_params.get("page", 1)))
-            page_size = min(100, max(1, int(request.query_params.get("page_size", 20))))
+            page      = max(1, int(params.get("page", 1)))
+            page_size = min(100, max(1, int(params.get("page_size", 20))))
         except (ValueError, TypeError):
             page, page_size = 1, 20
 
         total = qs.count()
         start = (page - 1) * page_size
-        end   = start + page_size
-        companies = qs[start:end]
+        companies = list(qs[start : start + page_size])
 
-        serializer = CompanyListSerializer(companies, many=True)
+        # Build response from annotated fields — zero extra queries per company
+        results = [
+            {
+                "symbol":        c.symbol,
+                "company_name":  c.company_name,
+                "sector_id":     c.sector_id,
+                "sector_name":   c.sector.sector_name if c.sector else None,
+                "is_banking":    c.is_banking,
+                "health_label":  c.latest_health_label,
+                "overall_score": _to_float(c.latest_overall_score),
+                "opm_pct":       _to_float(c.latest_opm),
+                "de_ratio":      _to_float(c.latest_de),
+                "company_logo":  c.company_logo,
+            }
+            for c in companies
+        ]
 
-        return Response({
-            "count":      total,
-            "page":       page,
-            "page_size":  page_size,
-            "num_pages":  max(1, -(-total // page_size)),   # ceiling division
-            "results":    serializer.data,
-        })
+        payload = {
+            "count":     total,
+            "page":      page,
+            "page_size": page_size,
+            "num_pages": max(1, -(-total // page_size)),
+            "results":   results,
+        }
+        cache.set(cache_key, payload, CHART_CACHE_TTL)
+        return Response(payload)
 
 
 @extend_schema(tags=["charts"])
@@ -560,13 +601,15 @@ class ScreenerAPIView(APIView):
                 "company_logo":   c.company_logo,
             })
 
-        return Response({
+        payload = {
             "count":     total,
             "page":      page,
             "page_size": page_size,
             "num_pages": max(1, -(-total // page_size)),
             "results":   results,
-        })
+        }
+        cache.set("screener:" + ":".join(f"{k}={v}" for k, v in sorted(params.items())), payload, CHART_CACHE_TTL)
+        return Response(payload)
 
 
 @extend_schema(tags=["companies"])
@@ -579,12 +622,19 @@ class CompareAPIView(APIView):
     """
 
     def get(self, request):
-        symbols = [s.strip().upper() for s in request.query_params.getlist("symbol") if s.strip()][:4]
+        symbols = sorted(set(
+            s.strip().upper() for s in request.query_params.getlist("symbol") if s.strip()
+        ))[:4]
         if len(symbols) < 2:
             return Response(
                 {"detail": "Provide at least 2 symbol parameters."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        cache_key = "compare:" + ",".join(symbols)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
 
         companies_out = []
         revenue_chart_years = None
@@ -638,10 +688,12 @@ class CompareAPIView(APIView):
                 revenue_chart_years = [r.year.year_label for r in pl_rows]
             revenue_chart_data[sym] = [_to_float(r.sales) for r in pl_rows]
 
-        return Response({
+        payload = {
             "companies": companies_out,
             "revenue_chart": {
                 "years": revenue_chart_years or [],
                 "data":  revenue_chart_data,
             },
-        })
+        }
+        cache.set(cache_key, payload, CHART_CACHE_TTL)
+        return Response(payload)

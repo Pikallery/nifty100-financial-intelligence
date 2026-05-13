@@ -83,35 +83,36 @@ _db_url = os.getenv("DATABASE_URL")
 if _db_url:
     import urllib.parse as _up
     _u = _up.urlparse(_db_url)
-    _db_config = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": _u.path.lstrip("/"),
-        "USER": _u.username,
-        "PASSWORD": _u.password,
-        "HOST": _u.hostname,
-        "PORT": str(_u.port or 5432),
-        "OPTIONS": {"sslmode": "require"},
-        "CONN_MAX_AGE": 60,
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _u.path.lstrip("/"),
+            "USER": _u.username,
+            "PASSWORD": _u.password,
+            "HOST": _u.hostname,
+            "PORT": str(_u.port or 5432),
+            # CONN_MAX_AGE=0: Neon serverless closes idle connections; persistent
+            # connections across Vercel invocations are not reused anyway.
+            "CONN_MAX_AGE": 0,
+            "OPTIONS": {
+                "sslmode": "require",
+                "connect_timeout": 10,
+            },
+        }
     }
 else:
-    _db_config = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "nifty100_warehouse"),
-        "USER": os.getenv("DB_USER", "postgres"),
-        "PASSWORD": os.getenv("DB_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME", "nifty100_warehouse"),
+            "USER": os.getenv("DB_USER", "postgres"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "localhost"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+            "OPTIONS": {"connect_timeout": 10},
+        }
     }
-
-DATABASES = {
-    "default": {
-        **_db_config,
-        "OPTIONS": {
-            "connect_timeout": 10,
-        },
-    }
-}
 
 # ── Password Validation ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
@@ -211,17 +212,31 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ── Caching ───────────────────────────────────────────────────────────────────
-# Vercel is serverless — use LocMemCache (no persistent Redis needed for HTTP caching)
-# Redis is only used for Celery task queuing (separate worker)
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# Use Upstash Redis (already in env) as the shared cache so responses persist
+# across Vercel serverless invocations.  Falls back to LocMemCache in local dev.
+REDIS_URL = os.getenv("REDIS_URL", "")
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "nifty100-cache",
-        "TIMEOUT": 300,
+if REDIS_URL:
+    _cache_options = {}
+    if REDIS_URL.startswith("rediss://"):
+        # Upstash TLS — skip cert verification (self-signed intermediate)
+        _cache_options["ssl_cert_reqs"] = None
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "TIMEOUT": 300,
+            "OPTIONS": _cache_options,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "nifty100-cache",
+            "TIMEOUT": 300,
+        }
+    }
 
 # ── Celery ────────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL = REDIS_URL

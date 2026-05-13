@@ -20,7 +20,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
-from .models import Company, Sector, MLScore, ProsCons, Document, Peer
+from .models import Company, Sector, MLScore, ProsCons, Document, Peer, ProfitLoss, BalanceSheet
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +67,25 @@ class HomeView(View):
     def get(self, request):
         from django.db.models import Count, Avg
 
-        # All companies with latest score annotation
+        # Annotate every company with latest score + latest OPM + latest D/E in one query
+        latest_opm_sq = (
+            ProfitLoss.objects
+            .filter(symbol=OuterRef("symbol"), year__is_ttm=False)
+            .order_by("-year__sort_order")
+            .values("opm_percentage")[:1]
+        )
+        latest_de_sq = (
+            BalanceSheet.objects
+            .filter(symbol=OuterRef("symbol"), year__is_ttm=False)
+            .order_by("-year__sort_order")
+            .values("debt_to_equity")[:1]
+        )
         all_companies = list(
             _annotate_with_latest_score(
                 Company.objects.select_related("sector")
+            ).annotate(
+                cached_opm_pct=Subquery(latest_opm_sq),
+                cached_de_ratio=Subquery(latest_de_sq),
             )
         )
 
@@ -78,25 +93,6 @@ class HomeView(View):
         scored = [c for c in all_companies if c.latest_overall_score is not None]
         scored.sort(key=lambda c: float(c.latest_overall_score), reverse=True)
         featured = scored[:6] if len(scored) >= 6 else (scored + random.sample(all_companies, 6 - len(scored)))
-
-        # Attach latest P&L metrics (OPM%, D/E) to each featured company
-        for c in featured:
-            latest_pl = (
-                c.profit_loss_records
-                .select_related("year")
-                .filter(year__is_ttm=False)
-                .order_by("-year__sort_order")
-                .first()
-            )
-            latest_bs = (
-                c.balance_sheet_records
-                .select_related("year")
-                .filter(year__is_ttm=False)
-                .order_by("-year__sort_order")
-                .first()
-            )
-            c.cached_opm_pct = latest_pl.opm_percentage if latest_pl else None
-            c.cached_de_ratio = latest_bs.debt_to_equity if latest_bs else None
 
         # Sectors with company count and avg health score
         sectors_qs = (
