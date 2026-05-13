@@ -157,8 +157,8 @@
       el.innerHTML = `
         <div class="w-7 h-7 rounded-full bg-navy-50 flex items-center justify-center shrink-0 text-xs font-bold text-navy-700">${(c.symbol||'').slice(0,2)}</div>
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-slate-800 truncate">${c.name}</div>
-          <div class="text-xs text-slate-400">${c.symbol} &middot; ${c.sector||''}</div>
+          <div class="text-sm font-semibold text-slate-800 truncate">${c.company_name||c.symbol}</div>
+          <div class="text-xs text-slate-400">${c.symbol} &middot; ${c.sector_name||''}</div>
         </div>`;
       el.addEventListener('click', function () {
         addCompany(c);
@@ -246,8 +246,8 @@
         th.innerHTML = `
           <div class="flex flex-col items-center gap-1">
             <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-sm text-navy-700">${(c.symbol||'').slice(0,2)}</div>
-            <div class="font-semibold text-slate-800 text-xs leading-tight text-center">${c.name}</div>
-            <a href="/companies/${c.symbol}/" class="text-xs text-navy-600 hover:underline">${c.symbol}</a>
+            <div class="font-semibold text-slate-800 text-xs leading-tight text-center">${c.company_name||c.symbol}</div>
+            <a href="/company/${c.symbol}/" class="text-xs text-navy-600 hover:underline">${c.symbol}</a>
           </div>`;
         th.classList.remove('hidden');
       } else {

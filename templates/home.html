@@ -318,8 +318,8 @@
                   <span class="text-navy-800 font-bold text-xs">${(c.symbol||'').slice(0,2)}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-semibold text-slate-800 truncate">${c.name}</div>
-                  <div class="text-xs text-slate-500">${c.symbol} &middot; ${c.sector||''}</div>
+                  <div class="text-sm font-semibold text-slate-800 truncate">${c.company_name||c.symbol}</div>
+                  <div class="text-xs text-slate-500">${c.symbol} &middot; ${c.sector_name||''}</div>
                 </div>
               `;
               list.appendChild(a);

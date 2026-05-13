@@ -567,3 +567,81 @@ class ScreenerAPIView(APIView):
             "num_pages": max(1, -(-total // page_size)),
             "results":   results,
         })
+
+
+@extend_schema(tags=["companies"])
+class CompareAPIView(APIView):
+    """
+    GET /api/v1/companies/compare/?symbol=TCS&symbol=HCLTECH
+
+    Compare up to 4 companies side-by-side.
+    Returns a companies array with key metrics and a revenue_chart dataset.
+    """
+
+    def get(self, request):
+        symbols = [s.strip().upper() for s in request.query_params.getlist("symbol") if s.strip()][:4]
+        if len(symbols) < 2:
+            return Response(
+                {"detail": "Provide at least 2 symbol parameters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        companies_out = []
+        revenue_chart_years = None
+        revenue_chart_data  = {}
+
+        for sym in symbols:
+            try:
+                company = Company.objects.select_related("sector").get(symbol=sym)
+            except Company.DoesNotExist:
+                continue
+
+            latest_score = company.ml_scores.order_by("-computed_at").first()
+            latest_pl = (
+                company.profit_loss_records
+                .filter(year__is_ttm=False)
+                .order_by("-year__sort_order")
+                .first()
+            )
+            latest_bs = (
+                company.balance_sheet_records
+                .filter(year__is_ttm=False)
+                .order_by("-year__sort_order")
+                .first()
+            )
+
+            companies_out.append({
+                "symbol":            company.symbol,
+                "company_name":      company.company_name,
+                "sector":            company.sector.sector_name if company.sector else None,
+                "health_score":      _to_float(latest_score.overall_score)  if latest_score else None,
+                "health_label":      latest_score.health_label               if latest_score else None,
+                "revenue_cr":        _to_float(latest_pl.sales)              if latest_pl else None,
+                "net_profit_cr":     _to_float(latest_pl.net_profit)         if latest_pl else None,
+                "opm_pct":           _to_float(latest_pl.opm_percentage)     if latest_pl else None,
+                "npm_pct":           _to_float(latest_pl.net_profit_margin_pct) if latest_pl else None,
+                "roe_pct":           _to_float(company.roe_percentage),
+                "debt_to_equity":    _to_float(latest_bs.debt_to_equity)     if latest_bs else None,
+                "interest_coverage": _to_float(latest_pl.interest_coverage)  if latest_pl else None,
+                "eps":               _to_float(latest_pl.eps)                if latest_pl else None,
+                "market_cap_cr":     None,
+            })
+
+            # Build revenue chart dataset
+            pl_rows = list(
+                company.profit_loss_records
+                .select_related("year")
+                .filter(year__is_ttm=False)
+                .order_by("year__sort_order")
+            )
+            if revenue_chart_years is None:
+                revenue_chart_years = [r.year.year_label for r in pl_rows]
+            revenue_chart_data[sym] = [_to_float(r.sales) for r in pl_rows]
+
+        return Response({
+            "companies": companies_out,
+            "revenue_chart": {
+                "years": revenue_chart_years or [],
+                "data":  revenue_chart_data,
+            },
+        })

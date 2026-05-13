@@ -39,6 +39,13 @@ urlpatterns = [
         name="api_company_peers",
     ),
 
+    # Side-by-side company comparison (up to 4 symbols)
+    path(
+        "companies/compare/",
+        api_views.CompareAPIView.as_view(),
+        name="api_company_compare",
+    ),
+
     # Dynamic screener – Q() filter engine, returns company list JSON
     path(
         "screener/",
