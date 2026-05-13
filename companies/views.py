@@ -65,34 +65,71 @@ class HomeView(View):
     template_name = "home.html"
 
     def get(self, request):
-        # All active companies, annotated with latest score
+        from django.db.models import Count, Avg
+
+        # All companies with latest score annotation
         all_companies = list(
             _annotate_with_latest_score(
                 Company.objects.select_related("sector")
             )
         )
 
-        # 6 random companies for the featured section
-        featured = random.sample(all_companies, min(6, len(all_companies)))
+        # 6 highest-scoring companies for the featured section
+        scored = [c for c in all_companies if c.latest_overall_score is not None]
+        scored.sort(key=lambda c: float(c.latest_overall_score), reverse=True)
+        featured = scored[:6] if len(scored) >= 6 else (scored + random.sample(all_companies, 6 - len(scored)))
 
-        # Pre-fetch latest MLScore for each featured company
-        for company in featured:
-            company.prefetched_score = (
-                company.ml_scores.order_by("-computed_at").first()
+        # Attach latest P&L metrics (OPM%, D/E) to each featured company
+        for c in featured:
+            latest_pl = (
+                c.profit_loss_records
+                .select_related("year")
+                .filter(year__is_ttm=False)
+                .order_by("-year__sort_order")
+                .first()
             )
+            latest_bs = (
+                c.balance_sheet_records
+                .select_related("year")
+                .filter(year__is_ttm=False)
+                .order_by("-year__sort_order")
+                .first()
+            )
+            c.cached_opm_pct = latest_pl.opm_percentage if latest_pl else None
+            c.cached_de_ratio = latest_bs.debt_to_equity if latest_bs else None
 
-        # All sectors, ordered alphabetically
-        sectors = Sector.objects.prefetch_related("companies").order_by("sector_name")
+        # Sectors with company count and avg health score
+        sectors_qs = (
+            Sector.objects
+            .annotate(company_count=Count("companies"))
+            .order_by("sector_name")
+        )
+        sectors = list(sectors_qs)
+        # Add avg_health_score per sector
+        for s in sectors:
+            avg = (
+                MLScore.objects
+                .filter(symbol__sector=s)
+                .filter(
+                    computed_at=Subquery(
+                        MLScore.objects
+                        .filter(symbol=OuterRef("symbol"))
+                        .order_by("-computed_at")
+                        .values("computed_at")[:1]
+                    )
+                )
+                .aggregate(Avg("overall_score"))["overall_score__avg"]
+            )
+            s.avg_health_score = round(float(avg), 1) if avg is not None else None
 
-        # Latest 10 pros_cons items (newest first) across all companies
-        latest_pros_cons = (
+        # Latest pros/cons across all companies
+        latest_pros_cons = list(
             ProsCons.objects
             .select_related("symbol")
             .order_by("-generated_at")[:10]
         )
 
-        # Health label distribution for a quick visual summary
-        from django.db.models import Count
+        # Health label distribution: list of (label, count, text_color, bar_color)
         label_counts_qs = (
             MLScore.objects
             .filter(
@@ -106,13 +143,20 @@ class HomeView(View):
             .values("health_label")
             .annotate(count=Count("health_label"))
         )
-        health_label_counts = {row["health_label"]: row["count"] for row in label_counts_qs}
+        counts = {row["health_label"]: row["count"] for row in label_counts_qs}
+        health_distribution = [
+            ("EXCELLENT", counts.get("EXCELLENT", 0), "text-emerald-600", "bg-emerald-500"),
+            ("GOOD",      counts.get("GOOD",      0), "text-lime-600",    "bg-lime-500"),
+            ("AVERAGE",   counts.get("AVERAGE",   0), "text-yellow-600",  "bg-yellow-400"),
+            ("WEAK",      counts.get("WEAK",      0), "text-orange-600",  "bg-orange-400"),
+            ("POOR",      counts.get("POOR",      0), "text-red-600",     "bg-red-500"),
+        ]
 
         context = {
             "featured_companies":  featured,
             "sectors":             sectors,
             "latest_pros_cons":    latest_pros_cons,
-            "health_label_counts": health_label_counts,
+            "health_distribution": health_distribution,
             "total_companies":     len(all_companies),
         }
         return render(request, self.template_name, context)
@@ -175,17 +219,33 @@ class CompanyListView(View):
         except EmptyPage:
             companies = paginator.page(paginator.num_pages)
 
-        sectors = Sector.objects.order_by("sector_name")
-        health_labels = ["EXCELLENT", "GOOD", "AVERAGE", "WEAK", "POOR"]
+        from django.db.models import Count
+        sectors_qs = (
+            Sector.objects
+            .annotate(count=Count("companies"))
+            .order_by("sector_name")
+        )
+        # Attach .name attribute so template can use sector.name (template originally written this way)
+        sectors = list(sectors_qs)
+        for s in sectors:
+            s.name = s.sector_name
+
+        health_label_options = [
+            ("EXCELLENT", "text-emerald-600", "bg-emerald-100"),
+            ("GOOD",      "text-lime-600",    "bg-lime-100"),
+            ("AVERAGE",   "text-yellow-600",  "bg-yellow-100"),
+            ("WEAK",      "text-orange-600",  "bg-orange-100"),
+            ("POOR",      "text-red-600",     "bg-red-100"),
+        ]
 
         context = {
-            "companies":      companies,
-            "sectors":        sectors,
-            "health_labels":  health_labels,
-            "current_sector": sector_filter,
-            "current_label":  health_filter,
-            "current_sort":   sort,
-            "search_query":   q,
+            "companies":              companies,
+            "sectors":                sectors,
+            "health_label_options":   health_label_options,
+            "selected_sectors":       [sector_filter] if sector_filter else [],
+            "selected_health_labels": [health_filter] if health_filter else [],
+            "current_sort":           sort,
+            "search_query":           q,
         }
         return render(request, self.template_name, context)
 

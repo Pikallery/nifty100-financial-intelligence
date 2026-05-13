@@ -51,6 +51,25 @@
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
+    /* ─────────────── Dark mode (global override of Tailwind utility classes) ─────────────── */
+    html.dark body                   { background: #0f172a !important; color: #f1f5f9 !important; }
+    html.dark .bg-white              { background: #1e293b !important; }
+    html.dark .bg-slate-50           { background: #1e293b !important; }
+    html.dark .bg-slate-100          { background: #0f172a !important; }
+    html.dark .bg-slate-200          { background: #334155 !important; }
+    html.dark .text-slate-700        { color: #cbd5e1 !important; }
+    html.dark .text-slate-800        { color: #f1f5f9 !important; }
+    html.dark .text-slate-600        { color: #94a3b8 !important; }
+    html.dark .text-slate-500        { color: #94a3b8 !important; }
+    html.dark .text-slate-400        { color: #94a3b8 !important; }
+    html.dark .border-slate-100      { border-color: #334155 !important; }
+    html.dark .border-slate-200      { border-color: #334155 !important; }
+    html.dark .border-slate-300      { border-color: #475569 !important; }
+    html.dark .divide-slate-100 > * { border-color: #334155 !important; }
+    html.dark .hover\:bg-slate-50:hover  { background: #334155 !important; }
+    html.dark ::-webkit-scrollbar-track { background: #1e293b; }
+    html.dark ::-webkit-scrollbar-thumb { background: #475569; }
+
     /* Autocomplete dropdown */
     #search-dropdown {
       max-height: 320px;

@@ -125,14 +125,14 @@
         <!-- Logo + name -->
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
-            {% if company.logo_url %}
-            <img src="{{ company.logo_url }}" alt="{{ company.name }}" class="w-full h-full object-contain p-1" />
+            {% if company.company_logo %}
+            <img src="{{ company.company_logo }}" alt="{{ company.company_name }}" class="w-full h-full object-contain p-1" />
             {% else %}
             <span class="text-navy-800 font-bold text-sm">{{ company.symbol|slice:":2" }}</span>
             {% endif %}
           </div>
           <div>
-            <div class="font-bold text-slate-800 text-sm leading-tight group-hover:text-navy-800 transition-colors">{{ company.name }}</div>
+            <div class="font-bold text-slate-800 text-sm leading-tight group-hover:text-navy-800 transition-colors">{{ company.company_name|default:company.symbol }}</div>
             <div class="text-xs text-slate-500 mt-0.5">{{ company.symbol }}</div>
           </div>
         </div>
@@ -142,18 +142,14 @@
           <svg class="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
             <circle cx="28" cy="28" r="22" fill="none" stroke="#e2e8f0" stroke-width="5"/>
             <circle cx="28" cy="28" r="22" fill="none"
-                    stroke="{% if company.health_label == 'EXCELLENT' %}#10b981
-                            {% elif company.health_label == 'GOOD' %}#84cc16
-                            {% elif company.health_label == 'AVERAGE' %}#eab308
-                            {% elif company.health_label == 'WEAK' %}#f97316
-                            {% else %}#ef4444{% endif %}"
+                    stroke="{% if company.latest_health_label == 'EXCELLENT' %}#10b981{% elif company.latest_health_label == 'GOOD' %}#84cc16{% elif company.latest_health_label == 'AVERAGE' %}#eab308{% elif company.latest_health_label == 'WEAK' %}#f97316{% else %}#ef4444{% endif %}"
                     stroke-width="5"
                     stroke-linecap="round"
-                    stroke-dasharray="{{ company.health_score|default:0 }}, 138"
+                    stroke-dasharray="{{ company.latest_overall_score|default:0 }}, 138"
                     class="transition-all duration-700"/>
           </svg>
           <div class="absolute inset-0 flex items-center justify-center">
-            <span class="text-xs font-bold text-slate-700">{{ company.health_score|default:"--" }}</span>
+            <span class="text-xs font-bold text-slate-700">{{ company.latest_overall_score|floatformat:0|default:"--" }}</span>
           </div>
         </div>
       </div>
@@ -161,29 +157,31 @@
       <!-- Sector badge -->
       <div class="mb-3">
         <span class="inline-block text-xs font-medium bg-navy-50 text-navy-700 border border-navy-100 px-2 py-0.5 rounded-full">
-          {{ company.sector }}
+          {{ company.sector.sector_name|default:"—" }}
         </span>
+        {% if company.latest_health_label %}
         <span class="ml-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full
-          {% if company.health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
-          {% elif company.health_label == 'GOOD' %}bg-lime-100 text-lime-700
-          {% elif company.health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
-          {% elif company.health_label == 'WEAK' %}bg-orange-100 text-orange-700
+          {% if company.latest_health_label == 'EXCELLENT' %}bg-emerald-100 text-emerald-700
+          {% elif company.latest_health_label == 'GOOD' %}bg-lime-100 text-lime-700
+          {% elif company.latest_health_label == 'AVERAGE' %}bg-yellow-100 text-yellow-700
+          {% elif company.latest_health_label == 'WEAK' %}bg-orange-100 text-orange-700
           {% else %}bg-red-100 text-red-700{% endif %}">
-          {{ company.health_label }}
+          {{ company.latest_health_label }}
         </span>
+        {% endif %}
       </div>
 
       <!-- Key metrics -->
       <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
         <div class="text-center">
-          <div class="text-sm font-bold {% if company.opm_pct >= 15 %}text-emerald-600{% elif company.opm_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
-            {{ company.opm_pct|default:"—" }}{% if company.opm_pct %}%{% endif %}
+          <div class="text-sm font-bold {% if company.cached_opm_pct >= 15 %}text-emerald-600{% elif company.cached_opm_pct >= 8 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {% if company.cached_opm_pct %}{{ company.cached_opm_pct }}%{% else %}—{% endif %}
           </div>
           <div class="text-xs text-slate-500">OPM</div>
         </div>
         <div class="text-center border-l border-slate-100">
-          <div class="text-sm font-bold {% if company.debt_to_equity <= 1 %}text-emerald-600{% elif company.debt_to_equity <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
-            {{ company.debt_to_equity|default:"—" }}
+          <div class="text-sm font-bold {% if company.cached_de_ratio <= 1 %}text-emerald-600{% elif company.cached_de_ratio <= 2 %}text-amber-600{% else %}text-red-500{% endif %}">
+            {{ company.cached_de_ratio|default:"—" }}
           </div>
           <div class="text-xs text-slate-500">D/E Ratio</div>
         </div>
@@ -226,10 +224,10 @@
 
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
       {% for sector in sectors %}
-      <a href="/companies/?sector={{ sector.name|urlencode }}"
+      <a href="/companies/?sector={{ sector.sector_name|urlencode }}"
          class="group bg-white rounded-xl border border-slate-200 p-4 text-center hover:shadow-md hover:border-navy-300 hover:-translate-y-0.5 transition-all duration-200">
-        <div class="text-2xl mb-2">{{ sector.icon|default:"🏢" }}</div>
-        <div class="text-sm font-semibold text-slate-700 group-hover:text-navy-800 leading-tight mb-2">{{ sector.name }}</div>
+        <div class="text-2xl mb-2">🏢</div>
+        <div class="text-sm font-semibold text-slate-700 group-hover:text-navy-800 leading-tight mb-2">{{ sector.sector_name }}</div>
         <div class="text-xs text-slate-500">{{ sector.company_count }} companies</div>
         <div class="mt-1.5 flex items-center justify-center gap-1">
           <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
